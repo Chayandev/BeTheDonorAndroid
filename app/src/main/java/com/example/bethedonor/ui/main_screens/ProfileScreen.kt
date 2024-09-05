@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -111,6 +112,7 @@ fun ProfileScreen(
     onEmailEditNavigate: () -> Unit
 ) {
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val coroutineScope = rememberCoroutineScope()
     var profileData by remember { mutableStateOf<ProfileResponse?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -556,7 +558,10 @@ fun ProfileScreen(
                                     profileViewmodel.selectState(it)
                                     profileViewmodel.updateProfileUiState.value.stateErrorState
                                 },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                onSearchTextFieldClicked = {
+                                    keyboardController?.show()
+                                }
                             )
                             SelectStateDistrictCityField(
                                 label = "District",
@@ -573,7 +578,10 @@ fun ProfileScreen(
                                     profileViewmodel.updateProfileUiState.value.districtErrorState
                                 },
                                 modifier = Modifier
-                                    .fillMaxWidth()
+                                    .fillMaxWidth(),
+                                onSearchTextFieldClicked = {
+                                    keyboardController?.show()
+                                }
                             )
                             SelectStateDistrictCityField(
                                 label = "Zip",
@@ -593,7 +601,10 @@ fun ProfileScreen(
                                     profileViewmodel.updateProfileUiState.value.pinCodeErrorState
                                 },
                                 modifier = Modifier
-                                    .fillMaxWidth()
+                                    .fillMaxWidth(),
+                                onSearchTextFieldClicked = {
+                                    keyboardController?.show()
+                                }
                             )
                             SelectStateDistrictCityField(
                                 label = "City",
@@ -614,7 +625,10 @@ fun ProfileScreen(
                                     profileViewmodel.updateProfileUiState.value.cityErrorState
                                 },
                                 modifier = Modifier
-                                    .fillMaxWidth()
+                                    .fillMaxWidth(),
+                                onSearchTextFieldClicked = {
+                                    keyboardController?.show()
+                                }
                             )
 
                             AvailabilityCheckerField(

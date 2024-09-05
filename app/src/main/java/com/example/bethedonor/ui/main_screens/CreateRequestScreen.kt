@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +40,7 @@ fun CreateRequestScreen(
     createRequestViewModel: CreateRequestViewModel
 ) {
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val coroutineScope = rememberCoroutineScope()
     val bloodGroupsList = bloodGroupList2
     val sheetState = rememberModalBottomSheetState(
@@ -101,7 +103,10 @@ fun CreateRequestScreen(
                         createRequestViewModel.selectState(it)
                         createRequestViewModel.newRequestUiState.value.stateErrorState
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    onSearchTextFieldClicked = {
+                        keyboardController?.show()
+                    }
                 )
                 SelectStateDistrictCityField(
                     label = "District",
@@ -114,7 +119,10 @@ fun CreateRequestScreen(
                         createRequestViewModel.selectDistrict(it)
                         createRequestViewModel.newRequestUiState.value.districtErrorState
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    onSearchTextFieldClicked = {
+                        keyboardController?.show()
+                    }
                 )
                 SelectStateDistrictCityField(
                     label = "Zip",
@@ -130,7 +138,10 @@ fun CreateRequestScreen(
                         createRequestViewModel.selectPin(it)
                         createRequestViewModel.newRequestUiState.value.pinCodeErrorState
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    onSearchTextFieldClicked = {
+                        keyboardController?.show()
+                    }
                 )
                 SelectStateDistrictCityField(
                     label = "City",
@@ -147,7 +158,10 @@ fun CreateRequestScreen(
                         createRequestViewModel.selectCity(it)
                         createRequestViewModel.newRequestUiState.value.cityErrorState
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    onSearchTextFieldClicked = {
+                        keyboardController?.show()
+                    }
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),

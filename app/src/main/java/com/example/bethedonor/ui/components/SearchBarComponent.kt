@@ -26,12 +26,11 @@ import com.example.bethedonor.ui.theme.Gray1
 import com.example.bethedonor.ui.theme.Gray2
 import com.example.bethedonor.ui.theme.fadeBlue1
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchBarComponent(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    modifier: Modifier
+    modifier: Modifier,
 ) {
     TextField(
         value = searchQuery,

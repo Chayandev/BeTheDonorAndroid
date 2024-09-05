@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -64,6 +65,7 @@ fun RegistrationScreen(
     registrationViewModel: RegistrationViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val bloodGroupsList = bloodGroupList1
     val genderList = genderList
 //    val areaData = readJsonFromAssets(context, "Location.json")
@@ -249,6 +251,9 @@ fun RegistrationScreen(
                                             .weight(1f)
                                             .padding(end = 4.dp),
                                         //  recheckFiled = recheckFiled
+                                        onSearchTextFieldClicked = {
+                                            keyboardController?.show()
+                                        }
                                     )
                                     SelectStateDistrictCityField(
                                         label = "District",
@@ -268,7 +273,10 @@ fun RegistrationScreen(
                                             .weight(1f)
                                             .padding(start = 4.dp),
                                         // recheckFiled = recheckFiled,
-                                    )
+                                        onSearchTextFieldClicked = {
+                                            keyboardController?.show()
+                                        })
+
                                 }
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -296,6 +304,9 @@ fun RegistrationScreen(
                                             .weight(1f)
                                             .padding(end = 4.dp),
                                         //   recheckFiled = recheckFiled,
+                                        onSearchTextFieldClicked = {
+                                            keyboardController?.show()
+                                        }
                                     )
                                     SelectStateDistrictCityField(
                                         label = "City",
@@ -319,6 +330,9 @@ fun RegistrationScreen(
                                             .weight(1f)
                                             .padding(start = 4.dp),
                                         // recheckFiled = recheckFiled,
+                                        onSearchTextFieldClicked = {
+                                            keyboardController?.show()
+                                        }
                                     )
                                 }
                             }
@@ -373,7 +387,11 @@ fun RegistrationScreen(
                                 onButtonClick = {
                                     //signupViewModel.registration()
                                     //   recheckFiled = true
-                                    Log.d("validity",registrationViewModel.validateWithRulesForRegister().toString())
+                                    Log.d(
+                                        "validity",
+                                        registrationViewModel.validateWithRulesForRegister()
+                                            .toString()
+                                    )
                                     if (registrationViewModel.validateWithRulesForRegister()) {
                                         registrationViewModel.registerUser(onRegister = {
                                             registrationResponse?.let {
@@ -405,7 +423,8 @@ fun RegistrationScreen(
                                 "Login",
                                 onTextClicked = {
                                     onRegisterNavigate()
-                                }, modifier =Modifier.padding(bottom = 16.dp))
+                                }, modifier = Modifier.padding(bottom = 16.dp)
+                            )
                             Spacer(modifier = Modifier.size(16.dp))
                         }
                     }
