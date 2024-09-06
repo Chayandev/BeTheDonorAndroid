@@ -36,10 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.bethedonor.R
 import com.example.bethedonor.domain.model.RequestCardDetails
 import com.example.bethedonor.ui.components.AllRequestCard
 import com.example.bethedonor.ui.components.FilterItemComponent
@@ -67,11 +69,8 @@ import kotlinx.coroutines.launch
 fun AllRequestScreen(
     navController: NavController,
     innerPadding: PaddingValues,
-    token: String,
-    userId: String,
     allRequestViewModel: AllRequestViewModel
 ) {
-    allRequestViewModel.updateAuthToken(token)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val allBloodRequestResponseList by allRequestViewModel.allBloodRequestResponseList.collectAsState(
@@ -98,8 +97,6 @@ fun AllRequestScreen(
     LaunchedEffect(hasFetchedRequests) {
         if (retryFlag || !hasFetchedRequests) {
             networkCall(
-                token = token,
-                userId = userId,
                 allRequestViewModel = allRequestViewModel,
             )
             allRequestViewModel.setFetchedProfile(true)
@@ -121,7 +118,7 @@ fun AllRequestScreen(
         containerColor = bgDarkBlue
     ) { padding ->
         Box(
-           contentAlignment = Alignment.TopCenter
+            contentAlignment = Alignment.TopCenter
         ) {
             Surface(color = bgDarkBlue) {
                 allBloodRequestResponseList?.let { result ->
@@ -132,7 +129,7 @@ fun AllRequestScreen(
                         listOf()
                     }
                     bloodRequestsWithUsers?.let {
-                        LazyColumn(state = rememberLazyListState()){
+                        LazyColumn(state = rememberLazyListState()) {
                             item {
                                 Spacer(modifier = Modifier.height(padding.calculateTopPadding()))
                             }
@@ -165,12 +162,13 @@ fun AllRequestScreen(
                                     postDate = dateDiffInDays(requestWithUser.bloodRequest.createdAt).toString(),
                                     isOpen = !isDeadlinePassed(requestWithUser.bloodRequest.deadline),
                                     isAcceptor = isDonor.value,
-                                    isMyCreation = requestWithUser.bloodRequest.userId == userId
+                                    isMyCreation = requestWithUser.bloodRequest.userId == allRequestViewModel.getUserId()
+                                        .toString()
                                 )
                                 AllRequestCard(
                                     details = cardDetails,
                                     allRequestViewModel,
-                                    token = token,
+                                    token = allRequestViewModel.getAuthToken().toString(),
                                     id = requestWithUser.bloodRequest.id,
                                     onDonationClickResponse = {
                                         Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -189,19 +187,18 @@ fun AllRequestScreen(
                 retryFlag = false
             }
             if (retryFlag) {
-                Retry(message = "Something Went Wrong", onRetry = {
+                Retry(message = stringResource(id = R.string.retry), onRetry = {
                     retryFlag = false
                     networkCall(
-                        token = token,
-                        userId = userId,
                         allRequestViewModel = allRequestViewModel,
                     )
                 })
             }
-            if(isRefreshing)
-            PullToRefreshContainer(
-                state = pullToRefreshState, modifier = Modifier.padding(innerPadding.calculateBottomPadding()+20.dp)
-            )
+            if (isRefreshing)
+                PullToRefreshContainer(
+                    state = pullToRefreshState,
+                    modifier = Modifier.padding(innerPadding.calculateBottomPadding() + 20.dp)
+                )
         }
         LaunchedEffect(isRefreshing) {
             if (isRefreshing) {
@@ -214,8 +211,6 @@ fun AllRequestScreen(
             LaunchedEffect(true) {
                 allRequestViewModel.setRefresherStatusTrue()
                 networkCall(
-                    token = token,
-                    userId = userId,
                     allRequestViewModel = allRequestViewModel,
                 )
             }
@@ -270,7 +265,7 @@ fun TopAppBarComponent(
                 modifier = Modifier.horizontalScroll(rememberScrollState())
             ) {
                 FilterItemComponent(
-                    label = "State",
+                    label = stringResource(id = R.string.label_state),
                     options = getStateDataList(),
                     selectedValue = filterState,
                     onSelection = {
@@ -279,7 +274,7 @@ fun TopAppBarComponent(
                         allRequestViewModel.clearStateFilter()
                     })
                 FilterItemComponent(
-                    label = "District",
+                    label =stringResource(id = R.string.label_district),
                     options = getDistrictList(filterState),
                     selectedValue = filterDistrict,
                     onSelection = {
@@ -288,7 +283,7 @@ fun TopAppBarComponent(
                         allRequestViewModel.clearDistrictFilter()
                     })
                 FilterItemComponent(
-                    label = "Pin Code",
+                    label = stringResource(id = R.string.label_pin),
                     options = getPinCodeList(filterState, filterDistrict),
                     selectedValue = filterPin,
                     onSelection = {
@@ -297,8 +292,8 @@ fun TopAppBarComponent(
                         allRequestViewModel.clearPinFilter()
                     })
                 FilterItemComponent(
-                    label = "City",
-                    options = getCityList(filterState, filterDistrict,filterPin),
+                    label = stringResource(id = R.string.label_city),
+                    options = getCityList(filterState, filterDistrict, filterPin),
                     selectedValue = filterCity,
                     onSelection = {
                         allRequestViewModel.updateFilterCity(it)
@@ -310,15 +305,15 @@ fun TopAppBarComponent(
     }
 }
 
-fun networkCall(token: String, userId: String, allRequestViewModel: AllRequestViewModel) {
+fun networkCall(allRequestViewModel: AllRequestViewModel) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
             // Launch both network calls in parallel using async
             val getAllBloodRequestDeferred = async {
-                allRequestViewModel.getAllBloodRequest(token)
+                allRequestViewModel.getAllBloodRequest()
             }
             val fetchCurrentUserDetailsDeferred = async {
-                allRequestViewModel.fetchCurrentUserDetails(token, userId)
+                allRequestViewModel.fetchCurrentUserDetails()
             }
             // Await the results of both calls
             awaitAll(getAllBloodRequestDeferred, fetchCurrentUserDetailsDeferred)
@@ -336,8 +331,6 @@ fun AllRequestScreenPreview() {
     AllRequestScreen(
         navController = NavController(LocalContext.current),
         innerPadding = PaddingValues(0.dp),
-        token = "",
-        userId = "",
         allRequestViewModel = viewModel()
     )
 }

@@ -66,7 +66,6 @@ data class TabItem(
 @Composable
 fun HistoryScreen(
     navController: NavHostController,
-    token: String,
     historyViewModel: HistoryViewModel,
     innerPadding: PaddingValues,
 ) {
@@ -78,8 +77,6 @@ fun HistoryScreen(
     val pagerState = rememberPagerState {
         tabItem.size
     }
-    historyViewModel.updateAuthToken(token)
-
     var selectedTabIndex by remember {
         mutableIntStateOf(0)
     }
@@ -137,7 +134,6 @@ fun HistoryScreen(
                     ) { page ->
                         when (page) {
                             0 -> RequestScreen(
-                                token = token,
                                 historyViewModel = historyViewModel,
                                 innerPadding
                             )
@@ -157,7 +153,7 @@ fun HistoryScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RequestScreen(token: String, historyViewModel: HistoryViewModel, innerPadding: PaddingValues) {
+fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValues) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
@@ -170,7 +166,7 @@ fun RequestScreen(token: String, historyViewModel: HistoryViewModel, innerPaddin
 
     LaunchedEffect(Unit) {
         if (retryFlag || historyViewModel.shouldFetch())
-            networkCall(token = token, historyViewModel = historyViewModel, id = 1)
+            networkCall(historyViewModel = historyViewModel, id = 1)
     }
     Box(modifier = Modifier.fillMaxSize()) {
         when {
@@ -180,9 +176,9 @@ fun RequestScreen(token: String, historyViewModel: HistoryViewModel, innerPaddin
             }
 
             retryFlag -> {
-                Retry(message = "Something Went Wrong", onRetry = {
+                Retry(message = stringResource(id = R.string.retry), onRetry = {
                     retryFlag = false
-                    networkCall(token = token, historyViewModel = historyViewModel, id = 1)
+                    networkCall(historyViewModel = historyViewModel, id = 1)
                 })
             }
 
@@ -219,7 +215,6 @@ fun RequestScreen(token: String, historyViewModel: HistoryViewModel, innerPaddin
                                     showBottomSheet = true
                                     scope.launch {
                                         networkCall(
-                                            token,
                                             historyViewModel,
                                             0,
                                             requestHistory.bloodRequest.id
@@ -229,7 +224,6 @@ fun RequestScreen(token: String, historyViewModel: HistoryViewModel, innerPaddin
                                 onDeleteConfirmation = {
                                     Log.d("onDeleteConfirmation", "Clicked")
                                     historyViewModel.deleteRequest(
-                                        token,
                                         requestHistory.bloodRequest.id,
                                         onResponse = { message ->
                                             showToast(
@@ -270,8 +264,8 @@ fun RequestScreen(token: String, historyViewModel: HistoryViewModel, innerPaddin
             ) {
             Box(contentAlignment = Alignment.Center) {
                 donorListResponse?.let { response ->
-                    if (response.isFailure || response.getOrNull()?.statusCode != "200") {
-                        showToast(context = context, message = "Something went wrong")
+                    if (response.isFailure || response.getOrNull()?.statusCode != stringResource(id = R.string.status_code_success)) {
+                        showToast(context = context, message = stringResource(id = R.string.retry))
                         return@let
                     }
                     val donors = response.getOrNull()?.donors
@@ -288,7 +282,8 @@ fun RequestScreen(token: String, historyViewModel: HistoryViewModel, innerPaddin
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No Acceptors", style = TextStyle(
+                                text = stringResource(id = R.string.no_acceptors),
+                                style = TextStyle(
                                     fontSize = MaterialTheme.typography.headlineMedium.fontSize,
                                     color = Color.Gray, textAlign = TextAlign.Center
                                 )
@@ -308,14 +303,13 @@ fun RequestScreen(token: String, historyViewModel: HistoryViewModel, innerPaddin
 
 
 fun networkCall(
-    token: String,
     historyViewModel: HistoryViewModel,
     id: Int,
     requestId: String? = null
 ) {
     when (id) {
         1 -> {
-            historyViewModel.fetchRequestHistory(token)
+            historyViewModel.fetchRequestHistory()
         }
 
         2 -> {
@@ -323,7 +317,7 @@ fun networkCall(
         }
 
         else -> {
-            historyViewModel.fetchDonorList(token, requestId ?: "")
+            historyViewModel.fetchDonorList(requestId ?: "")
         }
     }
 }

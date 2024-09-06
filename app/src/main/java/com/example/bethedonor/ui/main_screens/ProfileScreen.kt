@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bethedonor.R
 import com.example.bethedonor.data.dataModels.ProfileResponse
+import com.example.bethedonor.data.dataModels.UserProfile
 import com.example.bethedonor.ui.components.AvailabilityCheckerField
 import com.example.bethedonor.ui.components.ButtonComponent
 import com.example.bethedonor.ui.components.EditText
@@ -105,7 +106,6 @@ import java.util.Date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    authToken: String,
     innerPadding: PaddingValues,
     profileViewmodel: ProfileViewModel,
     onLogOutNavigate: () -> Unit,
@@ -114,32 +114,23 @@ fun ProfileScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val coroutineScope = rememberCoroutineScope()
-    var profileData by remember { mutableStateOf<ProfileResponse?>(null) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    val profileResponse by profileViewmodel.profileResponse.observeAsState()
-    // val deleteAccountResponse by profileViewmodel.deleteAccountResponse.collectAsState()
-
+    val profileResponse by profileViewmodel.profileResponse.collectAsState(null)
+    val profileData = remember {
+        mutableStateOf<UserProfile?>(null)
+    }
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
     var showBottomSheetForEditProfile by remember { mutableStateOf(false) }
-
-
+    var retryFlag by remember { mutableStateOf(false) }
     val isRefreshing by profileViewmodel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
     //**********
 
-    profileResponse?.let {
-        if (it.isSuccess) {
-            profileData = it.getOrNull()
-        } else {
-            errorMessage = it.exceptionOrNull()?.message
-        }
-    }
     val hasFetchedProfile = profileViewmodel.getFetchedProfile()
     LaunchedEffect(Unit) {
-        if (!hasFetchedProfile) {
-            networkCall(profileViewmodel, authToken, onResolve = {})
+        if (retryFlag || !hasFetchedProfile) {
+            networkCall(profileViewmodel)
             profileViewmodel.setFetchedProfile(true)
         }
     }
@@ -159,239 +150,255 @@ fun ProfileScreen(
                     )
                     .nestedScroll(pullToRefreshState.nestedScrollConnection)
             ) {
-                profileData?.myProfile?.let {
-                    Column(
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .verticalScroll(
-                                rememberScrollState()
-                            )
-                            .padding(
-                                start = 16.dp,
-                                end = 16.dp,
-                                top = 30.dp,
-                                bottom = innerPadding.calculateBottomPadding() * 2
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .background(bloodRed2, shape = RoundedCornerShape(60.dp)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (it.available == true) {
-                                    Canvas(modifier = Modifier.fillMaxSize()) {
-                                        val imageWidth = 80.dp.toPx()
-                                        val radius = imageWidth / 2f
-                                        val overlapAmount = radius / 3f
-                                        val iconSize =
-                                            overlapAmount * 1.5f // Reduce the size of the indicator
-
-                                        val iconCenterX =
-                                            (size.width / 2f) + (imageWidth / 2f) - overlapAmount
-                                        val iconCenterY =
-                                            (size.height / 2f) + (imageWidth / 2f) - overlapAmount
-
-                                        val arcStartAngle =
-                                            140f // Start angle for the arc in degrees
-                                        val arcSweepAngle =
-                                            2500f // Sweep angle for the arc in degrees
-
-                                        val arcRect = androidx.compose.ui.geometry.Rect(
-                                            left = (iconCenterX - iconSize / 2f),
-                                            top = (iconCenterY - iconSize / 2f),
-                                            right = (iconCenterX + iconSize / 2f),
-                                            bottom = (iconCenterY + iconSize / 2f)
-                                        )
-
-                                        drawCircle(
-                                            color = bloodRed2,
-                                            radius = radius,
-                                            center = Offset(size.width / 2f, size.height / 2f)
-                                        )
-
-                                        drawArc(
-                                            color = bgDarkBlue,
-                                            startAngle = arcStartAngle,
-                                            sweepAngle = arcSweepAngle,
-                                            useCenter = false,
-                                            topLeft = arcRect.topLeft,
-                                            size = Size(arcRect.width, arcRect.height),
-                                            style = Stroke(width = 12f)
-                                        )
-
-                                        drawCircle(
-                                            color = activeColor1,
-                                            radius = iconSize / 2f,
-                                            center = Offset(iconCenterX, iconCenterY)
-                                        )
-                                    }
-                                }
-                                // Green Dot
-                                Text(
-                                    text = "${it.name?.let { it1 -> getInitials(it1) }}",
-                                    fontSize = MaterialTheme.typography.headlineLarge.fontSize,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                profileResponse?.let { result ->
+                    profileData.value = if (result.getOrNull()?.myProfile != null) {
+                        result.getOrNull()?.myProfile
+                    } else {
+                        retryFlag = true
+                        null
+                    }
+                    profileData.value?.let {
+                        Column(
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .verticalScroll(
+                                    rememberScrollState()
                                 )
-                            }  // Green Dot positioned on top of the text
-
+                                .padding(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 30.dp,
+                                    bottom = innerPadding.calculateBottomPadding() * 2
+                                )
+                        ) {
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                modifier = Modifier.weight(1f)
-
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                TextComponent(
-                                    value = it.requests?.size ?: 0,
-                                    label = "Requested"
-                                )
-                                TextComponent(
-                                    value = it.donates?.size ?: 0,
-                                    label = "Donated"
-                                )
-                            }
+                                Box(
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                        .background(bloodRed2, shape = RoundedCornerShape(60.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (profileData.value?.available == true) {
+                                        Canvas(modifier = Modifier.fillMaxSize()) {
+                                            val imageWidth = 80.dp.toPx()
+                                            val radius = imageWidth / 2f
+                                            val overlapAmount = radius / 3f
+                                            val iconSize =
+                                                overlapAmount * 1.5f // Reduce the size of the indicator
 
-                        }
-                        SpacerComponent(12.dp)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            BoldTextComponent(label = it.name ?: "John Dao")
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                if (it.available == false)
-                                    Icon(
-                                        //imageVector = Icons.Filled.ModeNight,
-                                        imageVector = Icons.Filled.DoNotDisturbAlt,
-                                        contentDescription = "Not Available",
-                                        tint = bloodTransparent2
-                                        // tint = moonNightColor,
-                                        // modifier = Modifier.rotate(45F)
-                                    )
-                                Text(
-                                    text = if (it.available == true) "Available" else "Not Available",
-                                    color = if (it.available == true) Color.White else Color.LightGray,
-                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize
-                                )
-                            }
-                        }
-                        SpacerComponent(4.dp)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = it.email ?: "xyz@gmail.com",
-                                color = Color.LightGray,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "Edit",
-                                color = bloodRed2,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.clickable {
-                                    onEmailEditNavigate()
-                                }
-                            )
-                        }
-                        SpacerComponent(16.dp)
-                        ButtonElement(label = "Sign out",
-                            onClick = {},
-                            showDialog = true,
-                            dialogTitle = "Confirm Logout",
-                            dialogMessage = "Are you sure you want to logout? You will need to log in again to access your account.",
-                            dialogIcon = Icons.AutoMirrored.Filled.Logout,
-                            onConfirmAction = {
-                                coroutineScope.launch {
-                                    profileViewmodel.logoutUser(onLogout = {
-                                        onLogOutNavigate()
-                                    })
-                                    Toast.makeText(context, "Logged out", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        )
-                        SpacerComponent(dp = 24.dp)
-                        BoldTextComponent(label = "Personal Information")
-                        SpacerComponent(dp = 20.dp)
-                        InformationComponent(
-                            icon = Icons.Outlined.Home,
-                            label = "Address",
-                            value = "${it.state}, ${it.district}, ${it.city}, ${
-                                it.pin
-                            }"
-                        )
-                        InformationComponent(
-                            icon = Icons.Outlined.Phone,
-                            label = "Phone",
-                            value = it.phoneNumber ?: "175483758"
-                        )
-                        InformationComponent(
-                            icon = Icons.Outlined.Transgender,
-                            label = "Gender",
-                            value = it.gender ?: "Male"
-                        )
-                        InformationComponent(
-                            icon = Icons.Outlined.Bloodtype,
-                            label = "Blood Group",
-                            value = it.bloodGroup ?: "B+"
-                        )
-                        InformationComponent(
-                            icon = Icons.Outlined.DateRange,
-                            label = "DOB",
-                            value = formatDate(it.dob ?: Date(0))
-                        )
-                        ButtonElement(label = "Edit profile", onClick = {
-                            showBottomSheetForEditProfile = true
-                        })
-                        SpacerComponent(16.dp)
-                        ButtonComponent(
-                            isEnable = !profileViewmodel.requestInProgress.value,
-                            buttonText = "Delete Account",
-                            onButtonClick = {},
-                            showDialog = true,
-                            dialogTitle = "Confirm Deletion",
-                            dialogMessage = "Are you sure you want to delete your account? This action is irreversible, and all your data will be permanently lost.",
-                            dialogIcon = Icons.Filled.DeleteForever,
-                            onConfirmAction = {
-                                profileViewmodel.deleteAccount(token = authToken) { result ->
-                                    if (result.isSuccess) {
-                                        // Handle the success case
-                                        val response = result.getOrNull()
-                                        Toast.makeText(
-                                            context,
-                                            response?.message ?: "Account Deleted",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                            val iconCenterX =
+                                                (size.width / 2f) + (imageWidth / 2f) - overlapAmount
+                                            val iconCenterY =
+                                                (size.height / 2f) + (imageWidth / 2f) - overlapAmount
 
-                                        // Proceed to logout after account deletion is successful
-                                        coroutineScope.launch {
-                                            profileViewmodel.logoutUser(onLogout = {
-                                                onLogOutNavigate()
-                                            })
+                                            val arcStartAngle =
+                                                140f // Start angle for the arc in degrees
+                                            val arcSweepAngle =
+                                                2500f // Sweep angle for the arc in degrees
+
+                                            val arcRect = androidx.compose.ui.geometry.Rect(
+                                                left = (iconCenterX - iconSize / 2f),
+                                                top = (iconCenterY - iconSize / 2f),
+                                                right = (iconCenterX + iconSize / 2f),
+                                                bottom = (iconCenterY + iconSize / 2f)
+                                            )
+
+                                            drawCircle(
+                                                color = bloodRed2,
+                                                radius = radius,
+                                                center = Offset(size.width / 2f, size.height / 2f)
+                                            )
+
+                                            drawArc(
+                                                color = bgDarkBlue,
+                                                startAngle = arcStartAngle,
+                                                sweepAngle = arcSweepAngle,
+                                                useCenter = false,
+                                                topLeft = arcRect.topLeft,
+                                                size = Size(arcRect.width, arcRect.height),
+                                                style = Stroke(width = 12f)
+                                            )
+
+                                            drawCircle(
+                                                color = activeColor1,
+                                                radius = iconSize / 2f,
+                                                center = Offset(iconCenterX, iconCenterY)
+                                            )
                                         }
-                                    } else {
-                                        val error = result.exceptionOrNull()
-                                        Toast.makeText(
-                                            context,
-                                            error?.message ?: "Failed to delete account",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
                                     }
+                                    // Green Dot
+                                    Text(
+                                        text = "${
+                                            profileData.value?.name?.let { it1 ->
+                                                getInitials(
+                                                    it1
+                                                )
+                                            }
+                                        }",
+                                        fontSize = MaterialTheme.typography.headlineLarge.fontSize,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }  // Green Dot positioned on top of the text
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    modifier = Modifier.weight(1f)
+
+                                ) {
+                                    TextComponent(
+                                        value = profileData.value?.requests?.size ?: 0,
+                                        label = "Requested"
+                                    )
+                                    TextComponent(
+                                        value = profileData.value?.donates?.size ?: 0,
+                                        label = "Donated"
+                                    )
+                                }
+
+                            }
+                            SpacerComponent(12.dp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                BoldTextComponent(label = profileData.value?.name ?: "John Dao")
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(1.dp)
+                                ) {
+                                    if (profileData.value?.available == false)
+                                        Icon(
+                                            //imageVector = Icons.Filled.ModeNight,
+                                            imageVector = Icons.Filled.DoNotDisturbAlt,
+                                            contentDescription = "Not Available",
+                                            tint = bloodTransparent2
+                                            // tint = moonNightColor,
+                                            // modifier = Modifier.rotate(45F)
+                                        )
+                                    Text(
+                                        text = if (profileData.value?.available == true) "Available" else "Not Available",
+                                        color = if (profileData.value?.available == true) Color.White else Color.LightGray,
+                                        fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                                    )
                                 }
                             }
-                        )
+                            SpacerComponent(4.dp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = profileData.value?.email ?: "xyz@gmail.com",
+                                    color = Color.LightGray,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = "Edit",
+                                    color = bloodRed2,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable {
+                                        onEmailEditNavigate()
+                                    }
+                                )
+                            }
+                            SpacerComponent(16.dp)
+                            ButtonElement(label = "Sign out",
+                                onClick = {},
+                                showDialog = true,
+                                dialogTitle = "Confirm Logout",
+                                dialogMessage = "Are you sure you want to logout? You will need to log in again to access your account.",
+                                dialogIcon = Icons.AutoMirrored.Filled.Logout,
+                                onConfirmAction = {
+                                    coroutineScope.launch {
+                                        profileViewmodel.logoutUser(onLogout = {
+                                            onLogOutNavigate()
+                                        })
+                                        Toast.makeText(context, "Logged out", Toast.LENGTH_SHORT)
+                                            .show()
+                                    }
+                                }
+                            )
+                            SpacerComponent(dp = 24.dp)
+                            BoldTextComponent(label = "Personal Information")
+                            SpacerComponent(dp = 20.dp)
+                            InformationComponent(
+                                icon = Icons.Outlined.Home,
+                                label = "Address",
+                                value = "${profileData.value?.state}, ${profileData.value?.district}, ${profileData.value?.city}, ${
+                                    profileData.value?.pin
+                                }"
+                            )
+                            InformationComponent(
+                                icon = Icons.Outlined.Phone,
+                                label = "Phone",
+                                value = profileData.value?.phoneNumber ?: "175483758"
+                            )
+                            InformationComponent(
+                                icon = Icons.Outlined.Transgender,
+                                label = "Gender",
+                                value = profileData.value?.gender ?: "Male"
+                            )
+                            InformationComponent(
+                                icon = Icons.Outlined.Bloodtype,
+                                label = "Blood Group",
+                                value = profileData.value?.bloodGroup ?: "B+"
+                            )
+                            InformationComponent(
+                                icon = Icons.Outlined.DateRange,
+                                label = "DOB",
+                                value = formatDate(profileData.value?.dob ?: Date(0))
+                            )
+                            ButtonElement(label = "Edit profile", onClick = {
+                                showBottomSheetForEditProfile = true
+                            })
+                            SpacerComponent(16.dp)
+                            ButtonComponent(
+                                isEnable = !profileViewmodel.requestInProgress.value,
+                                buttonText = "Delete Account",
+                                onButtonClick = {},
+                                showDialog = true,
+                                dialogTitle = "Confirm Deletion",
+                                dialogMessage = "Are you sure you want to delete your account? This action is irreversible, and all your data will be permanently lost.",
+                                dialogIcon = Icons.Filled.DeleteForever,
+                                onConfirmAction = {
+                                    profileViewmodel.deleteAccount() { result ->
+                                        if (result.isSuccess) {
+                                            // Handle the success case
+                                            val response = result.getOrNull()
+                                            Toast.makeText(
+                                                context,
+                                                response?.message ?: "Account Deleted",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+
+                                            // Proceed to logout after account deletion is successful
+                                            coroutineScope.launch {
+                                                profileViewmodel.logoutUser(onLogout = {
+                                                    onLogOutNavigate()
+                                                })
+                                            }
+                                        } else {
+                                            val error = result.exceptionOrNull()
+                                            Toast.makeText(
+                                                context,
+                                                error?.message ?: "Failed to delete account",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                }
+                            )
+
+                        }
 
                     }
 
@@ -406,7 +413,7 @@ fun ProfileScreen(
                 if (pullToRefreshState.isRefreshing) {
                     LaunchedEffect(true) {
                         profileViewmodel.setRefresherStatusTrue()
-                        networkCall(profileViewmodel, authToken, onResolve = {})
+                        networkCall(profileViewmodel)
                     }
                 }
                 PullToRefreshContainer(
@@ -421,11 +428,11 @@ fun ProfileScreen(
             mutableStateOf(false)
         }
         if (showBottomSheetForEditProfile) {
-            profileViewmodel.selectedState.value = profileData?.myProfile?.state
-            profileViewmodel.selectedDistrict.value = profileData?.myProfile?.district
-            profileViewmodel.selectedCity.value = profileData?.myProfile?.city
-            profileViewmodel.selectedPinCode.value = profileData?.myProfile?.pin
-            profileViewmodel.setAvailableToDonate(profileData?.myProfile?.available ?: false)
+            profileViewmodel.selectedState.value = profileData.value?.state
+            profileViewmodel.selectedDistrict.value = profileData.value?.district
+            profileViewmodel.selectedCity.value = profileData.value?.city
+            profileViewmodel.selectedPinCode.value = profileData.value?.pin
+            profileViewmodel.setAvailableToDonate(profileData.value?.available ?: false)
 
             ModalBottomSheet(
                 onDismissRequest = {
@@ -444,32 +451,32 @@ fun ProfileScreen(
                     Log.d("modalSheetLaunchEffect", "InEffect")
                     profileViewmodel.onEvent(
                         RegistrationUIEvent.GenderValueChangeEvent(
-                            profileData?.myProfile?.gender.toString()
+                            profileData.value?.gender.toString()
                         )
                     )
                     profileViewmodel.onEvent(
                         RegistrationUIEvent.StateValueChangeEvent(
-                            profileData?.myProfile?.state.toString()
+                            profileData.value?.state.toString()
                         )
                     )
                     profileViewmodel.onEvent(
                         RegistrationUIEvent.DistrictValueChangeEvent(
-                            profileData?.myProfile?.district.toString()
+                            profileData.value?.district.toString()
                         )
                     )
                     profileViewmodel.onEvent(
                         RegistrationUIEvent.CityValueChangeEvent(
-                            profileData?.myProfile?.city.toString()
+                            profileData.value?.city.toString()
                         )
                     )
                     profileViewmodel.onEvent(
                         RegistrationUIEvent.PinCodeValueChangeEvent(
-                            profileData?.myProfile?.pin.toString()
+                            profileData.value?.pin.toString()
                         )
                     )
                     profileViewmodel.onEvent(
                         RegistrationUIEvent.AvailabilityCheckerValueChangeEvent(
-                            profileData?.myProfile?.available ?: false
+                            profileData.value?.available ?: false
                         )
                     )
                     isFieldChanged.value = false
@@ -493,8 +500,8 @@ fun ProfileScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             EditText(
-                                label = "Name",
-                                value = profileData?.myProfile?.name.toString(),
+                                label = stringResource(id = R.string.label_name),
+                                value = profileData.value?.name.toString(),
                                 labelIcon = Icons.Filled.Person,
                                 onFiledValueChanged = {
                                     ValidationResult()
@@ -503,8 +510,8 @@ fun ProfileScreen(
                                 enable = false
                             )
                             EditText(
-                                label = "Email-id",
-                                value = profileData?.myProfile?.email.toString(),
+                                label = stringResource(id = R.string.label_emailId),
+                                value = profileData.value?.email.toString(),
                                 labelIcon = Icons.Filled.Email,
                                 onFiledValueChanged = {
                                     ValidationResult()
@@ -512,7 +519,7 @@ fun ProfileScreen(
                                 readOnly = true
                             )
                             var code =
-                                getCountryCode(profileData?.myProfile?.phoneNumber.toString())
+                                getCountryCode(profileData.value?.phoneNumber.toString())
                             Log.d("countryCode", code)
                             PhoneNumberEditText(
                                 readOnly = true,
@@ -522,7 +529,7 @@ fun ProfileScreen(
                                     )
                                     profileViewmodel.updateProfileUiState.value.phoneNoErrorState
                                 },
-                                value = getPhoneNoWithoutCountryCode(profileData?.myProfile?.phoneNumber.toString()),
+                                value = getPhoneNoWithoutCountryCode(profileData.value?.phoneNumber.toString()),
                                 recheckField = recheckFiled,
                                 // countryCode = code,
                                 code = {
@@ -533,8 +540,8 @@ fun ProfileScreen(
                             )
                             SelectionField(
                                 options = genderList,
-                                index = genderList.indexOf(profileData?.myProfile?.gender),
-                                label = "Gender",
+                                index = genderList.indexOf(profileData.value?.gender),
+                                label = stringResource(id = R.string.label_gender),
                                 onSelection = {
                                     isFieldChanged.value = true
                                     profileViewmodel.onEvent(
@@ -545,7 +552,7 @@ fun ProfileScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
                             SelectStateDistrictCityField(
-                                label = "State",
+                                label = stringResource(id = R.string.label_state),
                                 options = getStateDataList(),
                                 selectedValue = profileViewmodel.selectedState.value,
                                 onSelection = {
@@ -564,7 +571,7 @@ fun ProfileScreen(
                                 }
                             )
                             SelectStateDistrictCityField(
-                                label = "District",
+                                label = stringResource(id = R.string.label_district),
                                 options = getDistrictList(selectedState = profileViewmodel.selectedState.value),
                                 selectedValue = profileViewmodel.selectedDistrict.value,
                                 onSelection = {
@@ -584,7 +591,7 @@ fun ProfileScreen(
                                 }
                             )
                             SelectStateDistrictCityField(
-                                label = "Zip",
+                                label = stringResource(id = R.string.label_pin),
                                 options = getPinCodeList(
                                     selectedState = profileViewmodel.selectedState.value,
                                     selectedDistrict = profileViewmodel.selectedDistrict.value,
@@ -607,7 +614,7 @@ fun ProfileScreen(
                                 }
                             )
                             SelectStateDistrictCityField(
-                                label = "City",
+                                label = stringResource(id = R.string.label_city),
                                 options = getCityList(
                                     selectedState = profileViewmodel.selectedState.value,
                                     selectedDistrict = profileViewmodel.selectedDistrict.value,
@@ -641,42 +648,32 @@ fun ProfileScreen(
                                     profileViewmodel.updateProfileUiState.value.checkedAvailabilityStatus
                                 })
 
-                            ButtonComponent(buttonText = "Apply", onButtonClick = {
-                                if (isFieldChanged.value && !profileViewmodel.validateWithRulesForUpdate()) {
-                                    showToast(
-                                        context = context,
-                                        "Please fill all the required fields"
-                                    )
-                                    return@ButtonComponent
-                                }
-                                coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
-                                    if (!sheetState.isVisible) {
-                                        showBottomSheetForEditProfile = false
+                            ButtonComponent(
+                                buttonText = stringResource(id = R.string.apply),
+                                onButtonClick = {
+                                    if (isFieldChanged.value && !profileViewmodel.validateWithRulesForUpdate()) {
+                                        showToast(
+                                            context = context,
+                                            context.getString(R.string.message)
+                                        )
+                                        return@ButtonComponent
                                     }
-                                }
-                                profileViewmodel.updateProfile(token = authToken, onUpdate = {
-                                    if (it.first == "success") {
-                                        coroutineScope.launch {
-                                            networkCall(
-                                                profileViewmodel,
-                                                authToken,
-                                                onResolve = {
-                                                    profileResponse?.let { it ->
-                                                        if (it.isSuccess) {
-                                                            profileData = it.getOrNull()
-                                                        } else {
-                                                            errorMessage =
-                                                                it.exceptionOrNull()?.message.toString()
-                                                        }
-//
-                                                    }
-                                                }
-                                            )
+                                    coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
+                                        if (!sheetState.isVisible) {
+                                            showBottomSheetForEditProfile = false
                                         }
                                     }
-                                    showToast(context = context, it.second)
+                                    profileViewmodel.updateProfile(onUpdate = {
+                                        if (it.first == "success") {
+                                            coroutineScope.launch {
+                                                networkCall(
+                                                    profileViewmodel,
+                                                )
+                                            }
+                                        }
+                                        showToast(context = context, it.second)
+                                    })
                                 })
-                            })
                         }
                     }
                 }
@@ -684,31 +681,23 @@ fun ProfileScreen(
         }
 
         if (profileViewmodel.requestInProgress.value && !isRefreshing) {
+            retryFlag = false
             ProgressIndicatorComponent(label = stringResource(id = R.string.loading_indicator))
         }
         if (profileViewmodel.deletingAccountProgress.value) {
+            retryFlag = false
             ProgressIndicatorComponent(label = stringResource(id = R.string.delete_account_indicator))
         }
         if (profileViewmodel.updatingProfileInProgress.value) {
+            retryFlag = false
             ProgressIndicatorComponent(label = stringResource(id = R.string.updating_profile_indicator))
         }
-        if (profileData?.myProfile == null && profileData?.message != null && !profileViewmodel.requestInProgress.value) {
-            Retry(message = profileData?.message.toString(), onRetry = {
-                coroutineScope.launch {
-                    networkCall(
-                        profileViewmodel,
-                        authToken,
-                        onResolve = {
-                            profileResponse?.let {
-                                profileData = if (it.isSuccess) {
-                                    it.getOrNull()
-                                } else {
-                                    ProfileResponse(message = it.exceptionOrNull()?.message.toString())
-                                }
-                            }
-                        }
-                    )
-                }
+        if (retryFlag) {
+            Retry(message = stringResource(id = R.string.retry), onRetry = {
+                retryFlag = false
+                networkCall(
+                    profileViewmodel,
+                )
             })
         }
     }
@@ -717,12 +706,8 @@ fun ProfileScreen(
 
 private fun networkCall(
     profileViewmodel: ProfileViewModel,
-    authToken: String,
-    onResolve: () -> Unit?
 ) {
-    profileViewmodel.getProfile(authToken) {
-        onResolve()
-    }
+    profileViewmodel.getProfile() {}
 }
 
 
@@ -844,7 +829,6 @@ fun TextComponent(value: Int?, label: String) {
 @Composable
 fun ProfileScreenPreview() {
     ProfileScreen(
-        authToken = "",
         innerPadding = PaddingValues(0.dp),
         onLogOutNavigate = {
             //

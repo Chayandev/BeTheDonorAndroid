@@ -1,12 +1,15 @@
 package com.example.bethedonor.viewmodels
 
+import android.app.Application
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
 import com.example.bethedonor.data.dataModels.BackendResponse
 import com.example.bethedonor.data.dataModels.BloodRequest
 import com.example.bethedonor.data.dataModels.DonorListResponse
+import com.example.bethedonor.data.preferences.PreferencesManager
 import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.domain.usecase.DeleteRequestUseCase
 import com.example.bethedonor.domain.usecase.GetDonorListUseCase
@@ -21,12 +24,16 @@ data class RequestHistory(
     val bloodRequest: BloodRequest
 )
 
-class HistoryViewModel : ViewModel() {
-    val authToken = MutableStateFlow("")
-
-    fun updateAuthToken(token: String) {
-        authToken.value = token
+class HistoryViewModel(application: Application) : AndroidViewModel(application){
+    // ***** access the datastore ***** //
+    private val preferencesManager = PreferencesManager(getApplication())
+    fun getUserId(): String? {
+        return preferencesManager.userId
     }
+    private fun getAuthToken():String?{
+        return preferencesManager.jwtToken
+    }
+    //*************************
 
     private val _requestHistoryResponseList = MutableStateFlow<Result<List<RequestHistory>>?>(null)
     val requestHistoryResponseList: StateFlow<Result<List<RequestHistory>>?> =
@@ -65,12 +72,12 @@ class HistoryViewModel : ViewModel() {
         return (_recomposeTime.value % 3).toInt() == 0;
     }
 
-    fun fetchRequestHistory(token: String) {
+    fun fetchRequestHistory() {
         viewModelScope.launch {
             isRequestFetching.value = true
             try {
                 // Fetch request history
-                val response = getRequestHistoryUseCase.execute(token)
+                val response = getRequestHistoryUseCase.execute(getAuthToken().toString())
                 if (response.bloodRequests != null) {
                     // Wrap BloodRequest in RequestHistory
                     val requestHistoryList = response.bloodRequests.map { RequestHistory(it) }
@@ -88,12 +95,12 @@ class HistoryViewModel : ViewModel() {
         }
     }
 
-    fun fetchDonorList(token: String, requestId: String) {
+    fun fetchDonorList(requestId: String) {
         _donorListResponse.value = null
         viewModelScope.launch {
             _isDonorListFetching.value = true
             try {
-                val response = getDonorListUseCase.execute(token, requestId)
+                val response = getDonorListUseCase.execute(getAuthToken().toString(), requestId)
                 if (response.donors != null) {
                     _donorListResponse.value = Result.success(response)
                 } else {
@@ -109,12 +116,12 @@ class HistoryViewModel : ViewModel() {
         }
     }
 
-    fun deleteRequest(token: String, requestId: String, onResponse: (Result<String>) -> Unit) {
+    fun deleteRequest(requestId: String, onResponse: (Result<String>) -> Unit) {
         viewModelScope.launch {
          isDeletingRequest.value=true
             try {
                 Log.d("delete-request-id", requestId)
-                val response = deleteRequestUseCase.execute(token, requestId)
+                val response = deleteRequestUseCase.execute(getAuthToken().toString(), requestId)
                 Log.d("HistoryViewModel", "Delete Request Response: $response")
                 if (response.statusCode == "200") {
                     // Update the request history list after successful deletion
@@ -141,14 +148,13 @@ class HistoryViewModel : ViewModel() {
     }
 
     fun toggleRequestStatus(
-        token: String,
         requestId: String,
         onToggleStatus: (BackendResponse) -> Unit
     ) {
         isToggleStatusRequestFetching.value = mapOf(requestId to true)
         viewModelScope.launch {
             try {
-                val response = toggleRequestStatusUseCase.execute(token, requestId)
+                val response = toggleRequestStatusUseCase.execute(getAuthToken().toString(), requestId)
                 Log.d("response_toggle", response.toString())
                 onToggleStatus(
                     BackendResponse(

@@ -10,10 +10,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Initialize ViewModels with Application context
     val homeViewModel: HomeViewModel by lazy { HomeViewModel(application) }
     val profileViewModel: ProfileViewModel by lazy { ProfileViewModel(application) }
-    val allRequestViewModel: AllRequestViewModel by lazy { AllRequestViewModel() }
-    val createRequestViewModel: CreateRequestViewModel by lazy { CreateRequestViewModel() }
-    val historyViewModel: HistoryViewModel by lazy { HistoryViewModel() }
-    val editEmailViewModel: EditEmailViewModel by lazy { EditEmailViewModel() }
+    val allRequestViewModel: AllRequestViewModel by lazy { AllRequestViewModel(application) }
+    val createRequestViewModel: CreateRequestViewModel by lazy { CreateRequestViewModel(application) }
+    val historyViewModel: HistoryViewModel by lazy { HistoryViewModel(application) }
+    val editEmailViewModel: EditEmailViewModel by lazy { EditEmailViewModel(application) }
 }
 
 // Factory for creating MainViewModel with Application context

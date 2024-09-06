@@ -1,6 +1,7 @@
 package com.example.bethedonor.viewmodels
 
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
@@ -30,11 +31,16 @@ data class BloodRequestWithUser(
     val user: UserProfile
 )
 
-class AllRequestViewModel() : ViewModel() {
+class AllRequestViewModel(application: Application) : AndroidViewModel(application) {
 
-    // ***** get the useAvailabilityStatus to pass to the ui ***** //
-//    private val preferencesManager = PreferencesManager(getApplication())
-//    val userAvailabilityStatus = preferencesManager.userAvailabilityStatus
+    // ***** access the datastore ***** //
+    private val preferencesManager = PreferencesManager(getApplication())
+    fun getUserId(): String? {
+        return preferencesManager.userId
+    }
+    fun getAuthToken():String?{
+        return preferencesManager.jwtToken
+    }
     // ********************* **************************** //
     private val hasFetchedRequests = mutableStateOf(false)
     fun setFetchedProfile(value: Boolean) {
@@ -43,18 +49,13 @@ class AllRequestViewModel() : ViewModel() {
     fun getFetchedProfile(): Boolean {
         return  hasFetchedRequests .value
     }
+
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> get() = _isRefreshing.asStateFlow()
 
     fun setRefresherStatusTrue() {
         _isRefreshing.value = true
     }
-    private val authToken = MutableStateFlow("")
-
-    fun updateAuthToken(token: String) {
-        authToken.value = token
-    }
-
     private val _currentUserDetails = MutableStateFlow<Result<UserResponse>?>(null)
     val currentUserDetails: StateFlow<Result<UserResponse>?> = _currentUserDetails
 
@@ -92,17 +93,17 @@ class AllRequestViewModel() : ViewModel() {
     private val _filterPin = MutableStateFlow("")
     val filterPin: StateFlow<String> = _filterPin
 
-    fun getAllBloodRequest(token: String) {
+    fun getAllBloodRequest() {
         isRequestFetching.value = true
         viewModelScope.launch {
             try {
-                val response = getAllBloodRequestsUseCase.execute(token)
+                val response = getAllBloodRequestsUseCase.execute(getAuthToken().toString())
                 if (response.bloodRequests != null) {
                     // Use async to fetch user details in parallel
                     val bloodRequestWithUsersDeferred = response.bloodRequests.map { bloodRequest ->
                         async {
                             val userResponse =
-                                fetchUserDetailsUseCase.execute(token, bloodRequest.userId)
+                                fetchUserDetailsUseCase.execute(getAuthToken().toString(), bloodRequest.userId)
                             if (userResponse.user == null) {
                                 throw Exception("Failed to fetch user details for request: ${bloodRequest.userId}")
                             }
@@ -127,10 +128,10 @@ class AllRequestViewModel() : ViewModel() {
         }
     }
 
-    fun fetchCurrentUserDetails(token: String, userId: String) {
+    fun fetchCurrentUserDetails() {
         viewModelScope.launch {
             try {
-                val response = fetchUserDetailsUseCase.execute(token, userId)
+                val response = fetchUserDetailsUseCase.execute(getAuthToken().toString(),getUserId().toString())
                 _currentUserDetails.value = Result.success(response)
                 Log.d("currentUserDetails", response.toString())
                 Log.d("currentUserDetails", response.user.toString())
@@ -142,14 +143,13 @@ class AllRequestViewModel() : ViewModel() {
     }
 
     fun acceptDonation(
-        token: String,
         requestId: String,
         onResult: (Result<AcceptDonationResponse>) -> Unit
     ) {
         requestingToAccept.value = mapOf(requestId to true)
         viewModelScope.launch {
             try {
-                val response = acceptDonationUseCase.execute(token, requestId)
+                val response = acceptDonationUseCase.execute(getAuthToken().toString(), requestId)
                 onResult(Result.success(response))
 
                 // Update the donates list in the current user details

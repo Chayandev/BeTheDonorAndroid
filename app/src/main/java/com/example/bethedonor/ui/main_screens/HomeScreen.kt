@@ -90,7 +90,6 @@ data class CarouselItem(
 fun HomeScreen(
     navController: NavHostController,
     innerPadding: PaddingValues,
-    userId: String,
     homeViewModel: HomeViewModel
 ) {
     Scaffold(topBar = { AppTopBar() }, containerColor = bgDarkBlue) { padding ->

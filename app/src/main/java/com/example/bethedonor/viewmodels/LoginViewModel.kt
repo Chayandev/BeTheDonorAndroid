@@ -29,7 +29,15 @@ class LoginViewModel(application: Application) : AndroidViewModel(application){
     private val TAG = LoginViewModel::class.simpleName
 
     //*
+    // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
+    fun getUserId(): String? {
+        return preferencesManager.userId
+    }
+    fun getAuthToken():String?{
+        return preferencesManager.jwtToken
+    }
+    //*************************
     //*
     var loginUIState = mutableStateOf(LoginUiState())
     var requestInProgress = mutableStateOf(false)
@@ -68,15 +76,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application){
     fun isUserLoggedIn(): Boolean {
         return preferencesManager.jwtToken != null
     }
-    fun getUserId(): String {
-        return preferencesManager.userId.toString()
-    }
-
-    fun getToken(): String {
-        return preferencesManager.jwtToken.toString()
-    }
-
-
 
     fun onEvent(event: LoginUIEvent) {
         when (event) {

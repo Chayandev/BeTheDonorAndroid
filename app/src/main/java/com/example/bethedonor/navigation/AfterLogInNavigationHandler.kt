@@ -33,8 +33,6 @@ import com.example.bethedonor.viewmodels.MainViewModel
 @Composable
 fun AfterLogInNavigationStack(
     navController: NavHostController,
-    userId: String,
-    token: String,
     onLogOut: () -> Unit,
     mainViewModel: MainViewModel,
 ) {
@@ -77,36 +75,36 @@ fun AfterLogInNavigationStack(
                     navController = navController,
                     selectedDestination = currentRoute,
                     onHomeNavigate = {
-                        navController.navigate(Destination.Home(userId)) {
+                        navController.navigate(Destination.Home) {
                             launchSingleTop = true
                             restoreState = true
-                            popUpTo(Destination.Home(userId)) { inclusive = true }
+                            popUpTo(Destination.Home) { inclusive = true }
                         }
                     },
                     onAllRequestNavigate = {
-                        navController.navigate(Destination.AllRequest(userId)) {
+                        navController.navigate(Destination.AllRequest) {
                             launchSingleTop = true
                             restoreState = true
-                            popUpTo(Destination.AllRequest(userId)) { inclusive = true }
+                            popUpTo(Destination.AllRequest) { inclusive = true }
                         }
                     },
                     onCreateRequestNavigate = {
-                        navController.navigate(Destination.CreateRequest(userId)) {
+                        navController.navigate(Destination.CreateRequest) {
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
                     onHistoryNavigate = {
-                        navController.navigate(Destination.History(userId)) {
+                        navController.navigate(Destination.History) {
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
                     onProfileNavigate = {
-                        navController.navigate(Destination.Profile(token)) {
+                        navController.navigate(Destination.Profile) {
                             launchSingleTop = true
                             restoreState = true
-                            popUpTo(Destination.History(userId)) { inclusive = true }
+                            popUpTo(Destination.History) { inclusive = true }
                         }
                     }
                 )
@@ -117,13 +115,12 @@ fun AfterLogInNavigationStack(
         // Define the navigation graph for different screens
         NavHost(
             navController = navController,
-            startDestination = Destination.Home(userId)
+            startDestination = Destination.Home
         ) {
             composable<Destination.Home> {
                 HomeScreen(
                     navController = navController,
                     innerPadding,
-                    userId,
                     mainViewModel.homeViewModel
                 )
             }
@@ -131,8 +128,6 @@ fun AfterLogInNavigationStack(
                 AllRequestScreen(
                     navController = navController,
                     innerPadding = innerPadding,
-                    token = token,
-                    userId = userId,
                     mainViewModel.allRequestViewModel
                 )
             }
@@ -155,7 +150,6 @@ fun AfterLogInNavigationStack(
                 CreateRequestScreen(
                     navController = navController,
                     innerPadding,
-                    token,
                     onDone = { navController.popBackStack() },
                     mainViewModel.createRequestViewModel
                 )
@@ -163,14 +157,12 @@ fun AfterLogInNavigationStack(
             composable<Destination.History> {
                 HistoryScreen(
                     navController = navController,
-                    token,
                     mainViewModel.historyViewModel,
                     innerPadding
                 )
             }
             composable<Destination.Profile> {
                 ProfileScreen(
-                    token,
                     innerPadding = innerPadding,
                     onLogOutNavigate = onLogOut,
                     onEmailEditNavigate = {
@@ -194,8 +186,6 @@ fun AfterLogInNavigationStack(
                 }
             ) {
                 EditEmailScreen(
-                    authToken = token,
-                    userId = userId,
                     editEmailViewModel = mainViewModel.editEmailViewModel,
                     onNavigateBack = { navController.popBackStack() }
                 )

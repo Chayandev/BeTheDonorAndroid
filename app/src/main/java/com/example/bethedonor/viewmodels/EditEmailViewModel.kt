@@ -1,8 +1,10 @@
 package com.example.bethedonor.viewmodels
 
+import android.app.Application
 import android.media.session.MediaSession.Token
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
@@ -10,6 +12,7 @@ import com.example.bethedonor.data.dataModels.BackendOTPResponse
 import com.example.bethedonor.data.dataModels.BackendResponse
 import com.example.bethedonor.data.dataModels.ChangeEmailRequest
 import com.example.bethedonor.data.dataModels.VerifyOTPRequest
+import com.example.bethedonor.data.preferences.PreferencesManager
 import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.domain.usecase.ChangeEmailIDUseCase
 import com.example.bethedonor.domain.usecase.VerifyOTPUseCase
@@ -20,7 +23,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class EditEmailViewModel : ViewModel() {
+class EditEmailViewModel(application: Application) : AndroidViewModel(application) {
+
+    // ***** access the datastore ***** //
+    private val preferencesManager = PreferencesManager(getApplication())
+    fun getUserId(): String? {
+        return preferencesManager.userId
+    }
+    fun getAuthToken():String?{
+        return preferencesManager.jwtToken
+    }
+    //*************************************
 
     val editEmailUiState = mutableStateOf(RegistrationUiState())
 
@@ -66,13 +79,13 @@ class EditEmailViewModel : ViewModel() {
     var verifyInProgress = mutableStateOf(false)
     private val otpId = mutableStateOf("")
 
-    fun changeEmailId(token: String, userId: String, onResponse: (BackendOTPResponse) -> Unit) {
+    fun changeEmailId(onResponse: (BackendOTPResponse) -> Unit) {
         requestInProgress.value = true
         viewModelScope.launch {
             try {
-                Log.d("token", token)
+                Log.d("token", getAuthToken().toString())
                 val response = changeEmailUseCase.execute(
-                    token,
+                    getAuthToken().toString(),
                     ChangeEmailRequest(emailId = editEmailUiState.value.emailId, /*userId = userId*/)
                 )
                 val result = Result.success(response)
@@ -91,12 +104,12 @@ class EditEmailViewModel : ViewModel() {
         }
     }
 
-    fun verifyOTP(token: String, otp: String, onResponse: (BackendResponse) -> Unit) {
+    fun verifyOTP(otp: String, onResponse: (BackendResponse) -> Unit) {
         verifyInProgress.value=true
         viewModelScope.launch {
             try {
                 val response = verifyOTPUseCase.execute(
-                    token,
+                  getAuthToken().toString(),
                     VerifyOTPRequest(otp = otp, otpId = otpId.value)
                 )
                 Log.d("Response", response.toString())

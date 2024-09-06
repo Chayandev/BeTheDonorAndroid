@@ -10,22 +10,22 @@ sealed class Destination {
     data object Login : Destination()
 
     @Serializable
-    data class Home(val userId:String) : Destination()
+    data object Home : Destination()
 
     @Serializable
-    data class AllRequest(val userId:String) : Destination()
+    data object AllRequest : Destination()
 
     @Serializable
-    data class CreateRequest(val userId:String) : Destination()
+    data object CreateRequest : Destination()
 
     @Serializable
-    data class History(val userId:String) : Destination()
+    data object History: Destination()
 
     @Serializable
-    data class Profile(val userId:String ) : Destination()
+    data object Profile : Destination()
 
     @Serializable
-    data class ProfileEdit(val userId:String ) : Destination()
+    data object ProfileEdit : Destination()
 
     @Serializable
     data object EmailEdit : Destination()

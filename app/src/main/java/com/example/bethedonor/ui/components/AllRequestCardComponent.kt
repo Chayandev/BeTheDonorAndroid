@@ -1,5 +1,6 @@
 package com.example.bethedonor.ui.components
 
+import android.app.Application
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.TweenSpec
@@ -275,7 +276,12 @@ fun AllRequestCard(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = details.dueDate, color = Color.LightGray, softWrap = true, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                text = details.dueDate,
+                                color = Color.LightGray,
+                                softWrap = true,
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                     Column(
@@ -335,7 +341,6 @@ fun AllRequestCard(
 //                                return@Button
 //                            }
                             viewModel.acceptDonation(
-                                token = token,
                                 requestId = id
                             ) { response ->
                                 if (response.isSuccess) {
@@ -377,7 +382,7 @@ fun AllRequestCard(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "${details.postDate} days ago",
-                           softWrap = true,
+                            softWrap = true,
                             style = TextStyle(
                                 fontSize = MaterialTheme.typography.bodySmall.fontSize,
                                 color = Color.LightGray
@@ -506,7 +511,7 @@ fun AllRequestCardPreview() {
         token = "",
         id = "",
         //userAvailabilityStatus = false,
-        viewModel = AllRequestViewModel()
+        viewModel = AllRequestViewModel(application = Application())
     )
 
 }

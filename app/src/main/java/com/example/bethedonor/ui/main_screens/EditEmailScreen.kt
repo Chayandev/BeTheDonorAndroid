@@ -74,9 +74,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun EditEmailScreen(
     editEmailViewModel: EditEmailViewModel,
-    authToken: String,
     onNavigateBack: () -> Unit,
-    userId: String
 ) {
     val context = LocalContext.current
     Scaffold(topBar = {
@@ -94,14 +92,14 @@ fun EditEmailScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(16.dp)
             ) {
-                SubGreetText(text = "Change your Email Address")
+                SubGreetText(text = stringResource(R.string.change_email_address))
                 Text(
-                    text = "We'll send a 6 digit verification code to this new email address. You'll need to enter that code to complete the change.",
+                    text = stringResource(R.string.email_verification_message),
                     style = MaterialTheme.typography.bodyLarge,
                     color = Gray1
                 )
                 EditText(
-                    label = "Email-id",
+                    label = stringResource(id = R.string.label_emailId),
                     labelIcon = Icons.Filled.Email,
                     onFiledValueChanged = {
                         editEmailViewModel.onEvent(
@@ -110,8 +108,8 @@ fun EditEmailScreen(
                         editEmailViewModel.editEmailUiState.value.emailIdErrorState
                     },
                 )
-                ButtonComponent(buttonText = "Next", onButtonClick = {
-                    editEmailViewModel.changeEmailId(authToken, userId, onResponse = { response ->
+                ButtonComponent(buttonText = stringResource(R.string.button_next), onButtonClick = {
+                    editEmailViewModel.changeEmailId(onResponse = { response ->
                         response.let {
                             if (!it.otpId.isNullOrEmpty()) {
                                 editEmailViewModel.setOTPDialog(true)
@@ -121,13 +119,13 @@ fun EditEmailScreen(
                     })
                 }, isEnable = editEmailViewModel.editEmailUiState.value.emailIdErrorState.status)
                 Text(
-                    text = "By tapping 'Next', you agree to receive an email with a verification code from us and to use the code to verify your email address.",
+                    text = stringResource(R.string.agree_to_receive_code),
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.LightGray
                 )
             }
             if (editEmailViewModel.otpDialog.collectAsState().value) {
-                OTPDialog(editEmailViewModel, authToken, onNavigateBack = {
+                OTPDialog(editEmailViewModel, onNavigateBack = {
                     onNavigateBack()
                 })
             }
@@ -155,14 +153,18 @@ fun ScreenTopBar(onNavigateBack: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = "Back",
+            contentDescription = stringResource(R.string.back),
             modifier = Modifier
                 .size(30.dp)
                 .clickable {
                     onNavigateBack()
                 }, tint = Color.White
         )
-        Text(text = "Edit Email", color = Color.White, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = stringResource(R.string.edit_email_title),
+            color = Color.White,
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 
@@ -170,7 +172,6 @@ fun ScreenTopBar(onNavigateBack: () -> Unit) {
 @Composable
 fun OTPDialog(
     editEmailViewModel: EditEmailViewModel,
-    authToken: String,
     onNavigateBack: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
@@ -239,7 +240,7 @@ fun OTPDialog(
                     if (sheetState.currentValue != SheetValue.PartiallyExpanded) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_otp),
-                            contentDescription = "Custom Image",
+                            contentDescription = stringResource(R.string.otp_custom_image_desc),
                             modifier = Modifier
                                 .size(80.dp)
                                 .align(Alignment.CenterHorizontally)
@@ -247,7 +248,7 @@ fun OTPDialog(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                     Text(
-                        text = "OTP Verification",
+                        text = stringResource(R.string._verification),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -281,12 +282,14 @@ fun OTPDialog(
 
                 // Display countdown timer and resend button
                 Text(
-                    text = if (timerState.intValue > 0) "Resend OTP in ${timerState.intValue} seconds" else "Don't receive OTP code?",
+                    text = if (timerState.intValue > 0) "Resend OTP in ${(timerState.intValue)} seconds else stringResource" else stringResource(
+                        id = R.string.don_t_receive_otp
+                    ),
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (timerState.intValue > 0) teal else Color.White
                 )
                 Text(
-                    text = "Resend OTP",
+                    text = stringResource(id = R.string.resend_otp),
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (isResendEnabled.value) bloodRed2 else Color.Gray,
                     textDecoration = TextDecoration.Underline,
@@ -302,21 +305,24 @@ fun OTPDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Verify OTP button
-                ButtonComponent(buttonText = "Verify and Proceed", onButtonClick = {
-                    editEmailViewModel.verifyOTP(
-                        authToken,
-                        otpState.joinToString(""),
-                        onResponse = { response ->
-                            if (response.statusCode == "200") {
-                                coroutineScope.launch {
-                                    sheetState.hide()
+                ButtonComponent(
+                    buttonText = context.getString(R.string.verify_and_proceed),
+                    onButtonClick = {
+                        editEmailViewModel.verifyOTP(
+                            otpState.joinToString(""),
+                            onResponse = { response ->
+                                if (response.statusCode == context.getString(R.string.status_code_success)) {
+                                    coroutineScope.launch {
+                                        sheetState.hide()
+                                    }
+                                    editEmailViewModel.setOTPDialog(false)
+                                    onNavigateBack()
                                 }
-                                editEmailViewModel.setOTPDialog(false)
-                                onNavigateBack()
-                            }
-                            showToast(context = context, response.message.toString())
-                        })
-                }, isEnable = isOtpComplete)
+                                showToast(context = context, response.message.toString())
+                            })
+                    },
+                    isEnable = isOtpComplete
+                )
             }
 
         }
@@ -352,14 +358,4 @@ fun OTPDigitField(
             imeAction = ImeAction.Next
         ),
     )
-}
-
-private fun networkCall(
-    profileViewmodel: ProfileViewModel,
-    authToken: String,
-    onResolve: () -> Unit?
-) {
-    profileViewmodel.getProfile(authToken) {
-        onResolve()
-    }
 }

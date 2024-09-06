@@ -59,13 +59,9 @@ class AfterLogInActivity : ComponentActivity() {
                     color = bgDarkBlue
                 ) {
                     val homeViewModel: HomeViewModel = viewModel()
-                    val currentUserId = homeViewModel.getUserId()
-                    val token = homeViewModel.getToken()
                     val userAvailabilityStatus = homeViewModel.getUserAvailabilityStatus()
                     AfterLogInNavigationStack(
                         navController = rememberNavController(),
-                        userId = currentUserId,
-                        token = token,
                         onLogOut = {
                             val intent = Intent(this, BeforeLogInActivity::class.java)
                             startActivity(intent)

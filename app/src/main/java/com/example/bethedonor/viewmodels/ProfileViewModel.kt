@@ -27,6 +27,17 @@ import kotlinx.coroutines.launch
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
 
+
+    // ***** access the datastore ***** //
+    private val preferencesManager = PreferencesManager(getApplication())
+    fun getUserId(): String? {
+        return preferencesManager.userId
+    }
+    private fun getAuthToken():String?{
+        return preferencesManager.jwtToken
+    }
+    //*************************
+
     private val hasFetchedProfile = mutableStateOf(false)
     fun setFetchedProfile(value: Boolean) {
         hasFetchedProfile.value = value
@@ -151,17 +162,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         availableToDonate.value = value
     }
 
-//    private val _recomposeTime = MutableStateFlow(-1L)
-//    val recomposeTime: StateFlow<Long> = _recomposeTime
-//
-//    fun updateRecomposeTime() {
-//        _recomposeTime.value += 1
-//    }
-//
-//    fun shouldFetch(): Boolean {
-//        return (_recomposeTime.value % 3).toInt() == 0
-//    }
-
     // Edit Email address here and OTP validation **********
     private val _editEmailScreen = MutableStateFlow(false)
     val editEmailScreen: StateFlow<Boolean> get() = _editEmailScreen
@@ -178,19 +178,18 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     //****************************************************
 
 
-
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> get() = _isRefreshing.asStateFlow()
 
     fun setRefresherStatusTrue() {
         _isRefreshing.value = true
     }
-    //*** preferences-manager ***//
-    private val preferencesManager = PreferencesManager(getApplication())
+
 
     //*** api-responses ***//
-    private val _profileResponse = MutableLiveData<Result<ProfileResponse>>()
-    val profileResponse: LiveData<Result<ProfileResponse>> = _profileResponse
+    private val _profileResponse = MutableStateFlow<Result<ProfileResponse>?>(null)
+    val profileResponse: StateFlow<Result<ProfileResponse>?> = _profileResponse
+
     private val _deleteAccountResponse = MutableStateFlow<Result<AccountResponse>?>(null)
     val deleteAccountResponse: StateFlow<Result<AccountResponse>?> = _deleteAccountResponse
 
@@ -203,12 +202,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     var requestInProgress = mutableStateOf(false)
     var deletingAccountProgress= mutableStateOf(false)
     var updatingProfileInProgress = mutableStateOf(false)
-    fun getProfile(token: String, onProfileFetched: () -> Unit) {
+
+    fun getProfile(onProfileFetched: () -> Unit) {
         requestInProgress.value = true
         viewModelScope.launch {
             try {
-                Log.d("token", token)
-                val response = getUserProfileUserUseCase.execute(token)
+                Log.d("token", getAuthToken().toString())
+                val response = getUserProfileUserUseCase.execute(getAuthToken().toString())
                 val result = Result.success(response)
                 _profileResponse.value = result
                 Log.d("Response", response.toString())
@@ -224,7 +224,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun updateProfile(token: String, onUpdate: (Pair<String, String>) -> Unit) {
+    fun updateProfile(onUpdate: (Pair<String, String>) -> Unit) {
         val updates = UserUpdate(
             // phoneNumber = updateProfileUiState.value.phoneNo,
             gender = updateProfileUiState.value.gender,
@@ -237,7 +237,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
        updatingProfileInProgress.value=true
         viewModelScope.launch {
             try {
-                val response = updateProfileUseCase.execute("0", token, updates)
+                val response = updateProfileUseCase.execute("0", getAuthToken().toString(), updates)
                 val result = Result.success(response)
                 //  _profileResponse.value = result
                 Log.d("Response", response.toString())
@@ -253,11 +253,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
 
-    fun deleteAccount(token: String, onDeletePerformed: (Result<AccountResponse>) -> Unit) {
+    fun deleteAccount(onDeletePerformed: (Result<AccountResponse>) -> Unit) {
         deletingAccountProgress.value=true
         viewModelScope.launch {
             try {
-                val response = closeAccountUseCase.execute(token)
+                val response = closeAccountUseCase.execute(getAuthToken().toString())
                 _deleteAccountResponse.value = Result.success(response)
                 Log.d("Response", response.toString())
                 onDeletePerformed(Result.success(response))

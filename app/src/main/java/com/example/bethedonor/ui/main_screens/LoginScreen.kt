@@ -64,11 +64,11 @@ fun LoginScreen(
     val loginResponse by loginViewModel.loginResponse.observeAsState()
 
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackBarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
+            SnackbarHost(hostState = snackBarHostState)
         }) { padding ->
         Box(
             modifier = Modifier
@@ -110,7 +110,7 @@ fun LoginScreen(
                                 SubGreetText(text = "Welcome Back")
                                 Spacer(modifier = Modifier.size(20.dp))
                                 EditText(
-                                    label = "Email-id",
+                                    label = stringResource(id = R.string.label_emailId),
                                     labelIcon = Icons.Filled.Email,
                                     onFiledValueChanged = {
                                         loginViewModel.onEvent(LoginUIEvent.EmailValueChangeEvent(it))
@@ -120,7 +120,7 @@ fun LoginScreen(
                                     recheckFiled = recheckFiled
                                 )
                                 PasswordFiled(
-                                    "Password",
+                                    stringResource(id = R.string.label_password),
                                     Icons.Filled.Password,
                                     true,
                                     onFiledValueChanged = {
@@ -148,7 +148,7 @@ fun LoginScreen(
                                 verticalArrangement = Arrangement.SpaceBetween
                             ) {
                                 ButtonComponent(
-                                    buttonText = "Login",
+                                    buttonText = stringResource(id = R.string.button_login),
                                     onButtonClick = {
                                         recheckFiled = true
                                         if (loginViewModel.validateWithRulesForLogIn()) {
@@ -176,7 +176,7 @@ fun LoginScreen(
                                         } else {
                                             Toast.makeText(
                                                 context,
-                                                "Fill all the required fields!",
+                                                context.getString(R.string.message),
                                                 Toast.LENGTH_LONG
                                             ).show()
                                         }
@@ -185,8 +185,8 @@ fun LoginScreen(
                                 )
                                 Spacer(modifier = Modifier.size(20.dp))
                                 SimpleTextWithSpan(
-                                    "Don't have an account? ",
-                                    "Register",
+                                    stringResource(id = R.string.don_t_have_account) + " ",
+                                    stringResource(id = R.string.button_register),
                                     onTextClicked = {
                                         onRegisterNavigate()
                                     }, modifier = Modifier.padding(bottom = 16.dp)

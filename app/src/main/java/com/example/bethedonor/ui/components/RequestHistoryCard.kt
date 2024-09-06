@@ -335,7 +335,6 @@ fun RequestHistoryCard(
                     Button(
                         onClick = {
                             historyViewModel.toggleRequestStatus(
-                                historyViewModel.authToken.value,
                                 requestId = id,
                                 onToggleStatus = { response ->
                                     Log.d("response", "$response")

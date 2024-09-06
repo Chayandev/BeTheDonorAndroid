@@ -42,7 +42,7 @@ fun ProgressIndicatorComponent(label: String="Deleting...") {
         ) {
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CircularProgressIndicator(

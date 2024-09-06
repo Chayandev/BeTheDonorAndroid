@@ -1,6 +1,6 @@
 package com.example.bethedonor.ui.main_screens
 
-import android.util.Log
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -22,30 +21,22 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.bethedonor.R
 import com.example.bethedonor.ui.components.*
-import com.example.bethedonor.ui.theme.bgDarkBlue
 import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.utils.commons.showToast
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
 import com.example.bethedonor.utils.*
 import com.example.bethedonor.viewmodels.CreateRequestViewModel
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateRequestScreen(
     navController: NavController,
     innerPaddingValues: PaddingValues,
-    token: String,
     onDone: () -> Unit,
     createRequestViewModel: CreateRequestViewModel
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val coroutineScope = rememberCoroutineScope()
     val bloodGroupsList = bloodGroupList2
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-    )
     Surface(
         modifier = Modifier
             .fillMaxSize(),
@@ -89,11 +80,11 @@ fun CreateRequestScreen(
                             RegistrationUIEvent.DonationCenterValueChangeEvent(it)
                         )
                         createRequestViewModel.newRequestUiState.value.donationCenterErrorState
-                    }, label = "Donation Center",
+                    }, label = stringResource(id = R.string.label_donation_center),
                     labelIcon = Icons.Filled.LocationCity
                 )
                 SelectStateDistrictCityField(
-                    label = "State",
+                    label = stringResource(id = R.string.label_state),
                     options = getStateDataList(),
                     selectedValue = createRequestViewModel.selectedState.value,
                     onSelection = {
@@ -109,7 +100,7 @@ fun CreateRequestScreen(
                     }
                 )
                 SelectStateDistrictCityField(
-                    label = "District",
+                    label = stringResource(id = R.string.label_district),
                     options = getDistrictList(createRequestViewModel.selectedState.value),
                     selectedValue = createRequestViewModel.selectedDistrict.value,
                     onSelection = {
@@ -125,7 +116,7 @@ fun CreateRequestScreen(
                     }
                 )
                 SelectStateDistrictCityField(
-                    label = "Zip",
+                    label = stringResource(id = R.string.label_pin),
                     options = getPinCodeList(
                         createRequestViewModel.selectedState.value,
                         createRequestViewModel.selectedDistrict.value,
@@ -144,7 +135,7 @@ fun CreateRequestScreen(
                     }
                 )
                 SelectStateDistrictCityField(
-                    label = "City",
+                    label = stringResource(id = R.string.label_city),
                     options = getCityList(
                         createRequestViewModel.selectedState.value,
                         createRequestViewModel.selectedDistrict.value,
@@ -178,11 +169,11 @@ fun CreateRequestScreen(
                         modifier = Modifier
                             .weight(1f)
                             .padding(end = 4.dp),
-                        label = "Blood Unit"
+                        label = stringResource(id = R.string.label_blood_unit)
                     )
                     SelectionField(
                         options = bloodGroupsList,
-                        label = "Blood Group",
+                        label = stringResource(id = R.string.label_blood_group),
                         onSelection = {
                             createRequestViewModel.onEvent(
                                 RegistrationUIEvent.BloodGroupValueChangeEvent(it)
@@ -199,25 +190,21 @@ fun CreateRequestScreen(
                         RegistrationUIEvent.DateValueChangeEvent(it)
                     )
                     createRequestViewModel.newRequestUiState.value.deadLineErrorState
-                }, modifier = Modifier.fillMaxWidth(), label = "Deadline")
+                }, modifier = Modifier.fillMaxWidth(), label = stringResource(id = R.string.label_deadline))
                 SpacerComponent(dp = 20.dp)
                 ButtonComponent(
                     onButtonClick = {
-                        val validity =
-                            createRequestViewModel.validateWithRulesForNewRequest()
-                        Log.d("Validity", validity.toString())
                         if (!createRequestViewModel.validateWithRulesForNewRequest()) {
-                            showToast(context, "Fill all the required fields!")
+                            showToast(context, context.getString(R.string.message))
                             return@ButtonComponent
                         }
                         createRequestViewModel.createNewBloodRequest(
-                            token,
                             onCreated = { response ->
                                 onDone()
                                 showToast(context, response.message.toString())
                             })
 
-                    }, buttonText = "Send Request",
+                    }, buttonText = stringResource(id = R.string.send_request),
                     isEnable = !createRequestViewModel.requestInProgress.value
                 )
 

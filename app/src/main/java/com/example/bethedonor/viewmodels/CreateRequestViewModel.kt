@@ -1,13 +1,16 @@
 package com.example.bethedonor.viewmodels
 
+import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
 import com.example.bethedonor.data.dataModels.BackendResponse
 import com.example.bethedonor.data.dataModels.NewBloodRequest
+import com.example.bethedonor.data.preferences.PreferencesManager
 import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.domain.usecase.CreateRequestUseCase
 import com.example.bethedonor.domain.usecase.RegistrationUserUseCase
@@ -17,11 +20,17 @@ import com.example.bethedonor.ui.utils.validationRules.Validator
 import com.example.bethedonor.utils.toDate
 import kotlinx.coroutines.launch
 
-class CreateRequestViewModel : ViewModel() {
-
-
+class CreateRequestViewModel(application: Application) : AndroidViewModel(application) {
+    // ***** access the datastore ***** //
+    private val preferencesManager = PreferencesManager(getApplication())
+    fun getUserId(): String? {
+        return preferencesManager.userId
+    }
+    fun getAuthToken():String?{
+        return preferencesManager.jwtToken
+    }
+    //**********************************
     var newRequestUiState = mutableStateOf(RegistrationUiState())
-
     //***create-request-bottom-sheet ***//
     fun onEvent(event: RegistrationUIEvent) {
         when (event) {
@@ -117,7 +126,7 @@ class CreateRequestViewModel : ViewModel() {
     private val apiService = RetrofitClient.instance
     private val userRepository = UserRepositoryImp(apiService)
     private val createNewBloodRequestUseCase = CreateRequestUseCase(userRepository)
-    fun createNewBloodRequest(token: String, onCreated: (BackendResponse) -> Unit) {
+    fun createNewBloodRequest(onCreated: (BackendResponse) -> Unit) {
         requestInProgress.value = true
         val bloodRequest = NewBloodRequest(
             donationCenter = newRequestUiState.value.donationCenter,
@@ -131,7 +140,7 @@ class CreateRequestViewModel : ViewModel() {
         )
         viewModelScope.launch {
             try {
-                val response = createNewBloodRequestUseCase.execute(token, bloodRequest)
+                val response = createNewBloodRequestUseCase.execute(getAuthToken().toString(), bloodRequest)
                 val result = Result.success(response)
                 Log.d("Response", response.toString())
                 onCreated(response)
