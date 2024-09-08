@@ -58,6 +58,7 @@ import com.example.bethedonor.utils.getPinCodeList
 import com.example.bethedonor.utils.getStateDataList
 import com.example.bethedonor.utils.isDeadlinePassed
 import com.example.bethedonor.viewmodels.AllRequestViewModel
+import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -69,7 +70,8 @@ import kotlinx.coroutines.launch
 fun AllRequestScreen(
     navController: NavController,
     innerPadding: PaddingValues,
-    allRequestViewModel: AllRequestViewModel
+    allRequestViewModel: AllRequestViewModel,
+    sharedViewModel: SharedViewModel
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -84,8 +86,6 @@ fun AllRequestScreen(
     val filterDistrict by allRequestViewModel.filterDistrict.collectAsState()
     val filterCity by allRequestViewModel.filterCity.collectAsState()
     val filterPin by allRequestViewModel.filterPin.collectAsState()
-    val isSheetVisible by allRequestViewModel.isSheetVisible.collectAsState()
-    val sheetState = rememberModalBottomSheetState()
 
     var retryFlag by remember { mutableStateOf(false) }
 
@@ -138,13 +138,21 @@ fun AllRequestScreen(
                                 key = { requestWithUser -> requestWithUser.bloodRequest.id }
                             ) { requestWithUser ->
                                 val isDonor = remember { mutableStateOf(false) }
-
+                                val iSUserCreation = remember {
+                                    mutableStateOf(false)
+                                }
                                 currentUserDetails?.let { userResult ->
                                     if (userResult.isSuccess) {
                                         userResult.getOrNull()?.let { userResponse ->
                                             isDonor.value =
-                                                userResponse.user?.donates?.contains(requestWithUser.bloodRequest.id)
+                                                userResponse.myProfile?.donates?.contains(
+                                                    requestWithUser.bloodRequest.id
+                                                )
                                                     ?: false
+
+                                            iSUserCreation.value =
+                                                requestWithUser.bloodRequest.userId == (userResponse.myProfile?.id
+                                                    ?: false)
                                         }
                                     }
                                 }
@@ -162,13 +170,11 @@ fun AllRequestScreen(
                                     postDate = dateDiffInDays(requestWithUser.bloodRequest.createdAt).toString(),
                                     isOpen = !isDeadlinePassed(requestWithUser.bloodRequest.deadline),
                                     isAcceptor = isDonor.value,
-                                    isMyCreation = requestWithUser.bloodRequest.userId == allRequestViewModel.getUserId()
-                                        .toString()
+                                    isMyCreation = iSUserCreation.value
                                 )
                                 AllRequestCard(
                                     details = cardDetails,
                                     allRequestViewModel,
-                                    token = allRequestViewModel.getAuthToken().toString(),
                                     id = requestWithUser.bloodRequest.id,
                                     onDonationClickResponse = {
                                         Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -274,7 +280,7 @@ fun TopAppBarComponent(
                         allRequestViewModel.clearStateFilter()
                     })
                 FilterItemComponent(
-                    label =stringResource(id = R.string.label_district),
+                    label = stringResource(id = R.string.label_district),
                     options = getDistrictList(filterState),
                     selectedValue = filterDistrict,
                     onSelection = {
@@ -331,6 +337,7 @@ fun AllRequestScreenPreview() {
     AllRequestScreen(
         navController = NavController(LocalContext.current),
         innerPadding = PaddingValues(0.dp),
-        allRequestViewModel = viewModel()
+        allRequestViewModel = viewModel(),
+        sharedViewModel = viewModel()
     )
 }

@@ -26,13 +26,15 @@ import com.example.bethedonor.ui.utils.commons.showToast
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
 import com.example.bethedonor.utils.*
 import com.example.bethedonor.viewmodels.CreateRequestViewModel
+import com.example.bethedonor.viewmodels.SharedViewModel
 
 @Composable
 fun CreateRequestScreen(
     navController: NavController,
     innerPaddingValues: PaddingValues,
     onDone: () -> Unit,
-    createRequestViewModel: CreateRequestViewModel
+    createRequestViewModel: CreateRequestViewModel,
+    sharedViewModel: SharedViewModel
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -45,7 +47,7 @@ fun CreateRequestScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(color = fadeBlue11), contentAlignment = Alignment.Center
+                .background(color = fadeBlue11).padding(vertical = 20.dp)
         ) {
 
             Column(

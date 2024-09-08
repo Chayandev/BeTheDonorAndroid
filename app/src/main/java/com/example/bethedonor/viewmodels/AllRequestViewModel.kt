@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
 import com.example.bethedonor.data.dataModels.AcceptDonationResponse
 import com.example.bethedonor.data.dataModels.BloodRequest
+import com.example.bethedonor.data.dataModels.ProfileResponse
 import com.example.bethedonor.data.dataModels.UserProfile
 import com.example.bethedonor.data.dataModels.UserResponse
 import com.example.bethedonor.data.preferences.PreferencesManager
@@ -19,6 +20,7 @@ import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.domain.usecase.AcceptDonationUseCase
 import com.example.bethedonor.domain.usecase.FetchUserDetailsUseCase
 import com.example.bethedonor.domain.usecase.GetAllBloodRequestsUseCase
+import com.example.bethedonor.domain.usecase.GetUserProfileUseCase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,19 +37,18 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
 
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
-    fun getUserId(): String? {
-        return preferencesManager.userId
-    }
-    fun getAuthToken():String?{
+    fun getAuthToken(): String? {
         return preferencesManager.jwtToken
     }
+
     // ********************* **************************** //
     private val hasFetchedRequests = mutableStateOf(false)
     fun setFetchedProfile(value: Boolean) {
-        hasFetchedRequests .value = value
+        hasFetchedRequests.value = value
     }
+
     fun getFetchedProfile(): Boolean {
-        return  hasFetchedRequests .value
+        return hasFetchedRequests.value
     }
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -56,8 +57,9 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
     fun setRefresherStatusTrue() {
         _isRefreshing.value = true
     }
-    private val _currentUserDetails = MutableStateFlow<Result<UserResponse>?>(null)
-    val currentUserDetails: StateFlow<Result<UserResponse>?> = _currentUserDetails
+
+    private val _currentUserDetails = MutableStateFlow<Result<ProfileResponse>?>(null)
+    val currentUserDetails: StateFlow<Result<ProfileResponse>?> = _currentUserDetails
 
     private val _allBloodRequestResponse = MutableLiveData<Result<List<BloodRequestWithUser>>>()
     private val allBloodRequestResponse: LiveData<Result<List<BloodRequestWithUser>>> =
@@ -72,7 +74,9 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
     private val userRepository = UserRepositoryImp(apiService)
     private val getAllBloodRequestsUseCase = GetAllBloodRequestsUseCase(userRepository)
     private val fetchUserDetailsUseCase = FetchUserDetailsUseCase(userRepository)
+    private val getUserProfileUserUseCase = GetUserProfileUseCase(userRepository)
     private val acceptDonationUseCase = AcceptDonationUseCase(userRepository)
+
     val isRequestFetching = MutableStateFlow(false)
     val requestingToAccept = MutableStateFlow(mapOf<String, Boolean>())
     private val _isSheetVisible = MutableStateFlow(false)
@@ -103,7 +107,10 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
                     val bloodRequestWithUsersDeferred = response.bloodRequests.map { bloodRequest ->
                         async {
                             val userResponse =
-                                fetchUserDetailsUseCase.execute(getAuthToken().toString(), bloodRequest.userId)
+                                fetchUserDetailsUseCase.execute(
+                                    getAuthToken().toString(),
+                                    bloodRequest.userId
+                                )
                             if (userResponse.user == null) {
                                 throw Exception("Failed to fetch user details for request: ${bloodRequest.userId}")
                             }
@@ -123,7 +130,7 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
                 _allBloodRequestResponseList.value = Result.failure(e)
             } finally {
                 isRequestFetching.value = false
-                _isRefreshing.value=false
+                _isRefreshing.value = false
             }
         }
     }
@@ -131,10 +138,10 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
     fun fetchCurrentUserDetails() {
         viewModelScope.launch {
             try {
-                val response = fetchUserDetailsUseCase.execute(getAuthToken().toString(),getUserId().toString())
+                val response = getUserProfileUserUseCase.execute(getAuthToken().toString())
                 _currentUserDetails.value = Result.success(response)
                 Log.d("currentUserDetails", response.toString())
-                Log.d("currentUserDetails", response.user.toString())
+                //  Log.d("currentUserDetails", response.user.toString())
             } catch (e: Exception) {
                 e.printStackTrace()
                 _currentUserDetails.value = Result.failure(e)
@@ -152,15 +159,16 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
                 val response = acceptDonationUseCase.execute(getAuthToken().toString(), requestId)
                 onResult(Result.success(response))
 
-                // Update the donates list in the current user details
-                _currentUserDetails.value?.getOrNull()?.let { userResponse ->
-                    val updatedUserProfile = userResponse.user?.copy(
-                        donates = (userResponse.user.donates ?: emptyList()) + requestId
+                // Retrieve the current user details from the state flow
+                _currentUserDetails.value?.getOrNull()?.let { profileResponse ->
+                    // Create a new ProfileResponse instance with an updated donates list
+                    val updatedProfileResponse = profileResponse.myProfile?.copy(
+                        donates = (profileResponse.myProfile.donates ?: emptyList()) + requestId
                     )
 
-                    // Update _currentUserDetails with the modified UserProfile
+                    // Update _currentUserDetails with the modified ProfileResponse wrapped in Result.success
                     _currentUserDetails.value =
-                        Result.success(userResponse.copy(user = updatedUserProfile))
+                        Result.success(profileResponse.copy(myProfile = updatedProfileResponse))
                 }
             } catch (e: Exception) {
                 onResult(Result.failure(e))
@@ -210,9 +218,10 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
         _filterPin.value = ""
         filterBloodRequests()
     }
+
     fun clearPinFilter() {
         _filterPin.value = ""
-        _filterCity.value=""
+        _filterCity.value = ""
         filterBloodRequests()
     }
 

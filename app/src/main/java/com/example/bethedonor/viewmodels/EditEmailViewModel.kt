@@ -27,9 +27,7 @@ class EditEmailViewModel(application: Application) : AndroidViewModel(applicatio
 
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
-    fun getUserId(): String? {
-        return preferencesManager.userId
-    }
+
     fun getAuthToken():String?{
         return preferencesManager.jwtToken
     }

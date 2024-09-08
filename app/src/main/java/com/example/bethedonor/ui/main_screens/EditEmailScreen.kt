@@ -68,12 +68,14 @@ import com.example.bethedonor.ui.utils.commons.showToast
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
 import com.example.bethedonor.viewmodels.EditEmailViewModel
 import com.example.bethedonor.viewmodels.ProfileViewModel
+import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
 fun EditEmailScreen(
     editEmailViewModel: EditEmailViewModel,
+    sharedViewModel: SharedViewModel,
     onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current

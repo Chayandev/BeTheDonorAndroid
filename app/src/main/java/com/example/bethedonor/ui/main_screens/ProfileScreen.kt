@@ -100,6 +100,7 @@ import com.example.bethedonor.utils.getPhoneNoWithoutCountryCode
 import com.example.bethedonor.utils.getPinCodeList
 import com.example.bethedonor.utils.getStateDataList
 import com.example.bethedonor.viewmodels.ProfileViewModel
+import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -108,6 +109,7 @@ import java.util.Date
 fun ProfileScreen(
     innerPadding: PaddingValues,
     profileViewmodel: ProfileViewModel,
+    sharedViewModel: SharedViewModel,
     onLogOutNavigate: () -> Unit,
     onEmailEditNavigate: () -> Unit
 ) {
@@ -836,6 +838,7 @@ fun ProfileScreenPreview() {
         onEmailEditNavigate = {
             //
         },
-        profileViewmodel = viewModel()
+        profileViewmodel = viewModel(),
+        sharedViewModel = viewModel()
     )
 }

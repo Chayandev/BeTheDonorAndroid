@@ -1,7 +1,6 @@
 package com.example.bethedonor.ui.main_screens
 
 import android.app.Application
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -47,9 +47,9 @@ import com.example.bethedonor.ui.components.SimpleTextWithSpan
 import com.example.bethedonor.ui.components.SubGreetText
 import com.example.bethedonor.ui.theme.fadeBlue1
 import com.example.bethedonor.ui.theme.fadeBlue2
-import com.example.bethedonor.ui.utils.commons.showToast
 import com.example.bethedonor.ui.utils.validationRules.ValidationResult
 import com.example.bethedonor.viewmodels.LoginViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -58,25 +58,21 @@ fun LoginScreen(
     onRegisterNavigate: () -> Unit
 ) {
     val context = LocalContext.current
-    var recheckFiled by remember {
-        mutableStateOf(false)
-    }
+    var recheckFiled by remember { mutableStateOf(false) }
     val loginResponse by loginViewModel.loginResponse.observeAsState()
 
     val scope = rememberCoroutineScope()
     val snackBarHostState = remember { SnackbarHostState() }
 
     Scaffold(
-        snackbarHost = {
-            SnackbarHost(hostState = snackBarHostState)
-        }) { padding ->
+        snackbarHost = { SnackbarHost(hostState = snackBarHostState) }
+    ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize(), contentAlignment = Alignment.Center
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
             Surface(
-                modifier = Modifier
-                    .fillMaxSize()
+                modifier = Modifier.fillMaxSize()
             ) {
                 Box(
                     modifier = Modifier
@@ -87,9 +83,9 @@ fun LoginScreen(
                                 start = Offset.Zero,
                                 end = Offset.Infinite
                             )
-                        ), contentAlignment = Alignment.Center
-                )
-                {
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.SpaceEvenly,
@@ -125,19 +121,21 @@ fun LoginScreen(
                                     true,
                                     onFiledValueChanged = {
                                         loginViewModel.onEvent(
-                                            LoginUIEvent.PasswordValueChangeEvent(
-                                                it
-                                            )
+                                            LoginUIEvent.PasswordValueChangeEvent(it)
                                         )
                                         loginViewModel.printState()
                                         ValidationResult(true)
-                                        // loginViewModel.loginUIState.value.passwordErrorState
                                     },
                                     recheckFiled = recheckFiled
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 ForgotPassword(onResetProcessResult = { message ->
-                                    showToast(context, message)
+                                    scope.launch {
+                                        snackBarHostState.showSnackbar(
+                                            message = message,
+                                            duration = SnackbarDuration.Short
+                                        )
+                                    }
                                 })
                             }
                         }
@@ -159,26 +157,29 @@ fun LoginScreen(
                                                             if (it.getOrNull()?.statusCode == null && it.getOrNull()?.message != "timeout") {
                                                                 onLoginNavigate()
                                                             }
-                                                            Toast.makeText(
-                                                                context,
-                                                                it.getOrNull()?.message,
-                                                                Toast.LENGTH_LONG
-                                                            ).show()
+                                                            scope.launch {
+                                                                snackBarHostState.showSnackbar(
+                                                                    message = it.getOrNull()?.message ?: "Unknown error",
+                                                                    duration = SnackbarDuration.Short
+                                                                )
+                                                            }
                                                         } else {
-                                                            Toast.makeText(
-                                                                context,
-                                                                it.exceptionOrNull()?.message,
-                                                                Toast.LENGTH_LONG
-                                                            ).show()
+                                                            scope.launch {
+                                                                snackBarHostState.showSnackbar(
+                                                                    message = it.exceptionOrNull()?.message ?: "Unknown error",
+                                                                    duration = SnackbarDuration.Short
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 })
                                         } else {
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.message),
-                                                Toast.LENGTH_LONG
-                                            ).show()
+                                            scope.launch {
+                                                snackBarHostState.showSnackbar(
+                                                    message = context.getString(R.string.message),
+                                                    duration = SnackbarDuration.Short
+                                                )
+                                            }
                                         }
                                     },
                                     isEnable = loginViewModel.validateWithRulesForLogIn() && !loginViewModel.requestInProgress.value
@@ -204,6 +205,7 @@ fun LoginScreen(
         }
     }
 }
+
 
 @Preview
 @Composable

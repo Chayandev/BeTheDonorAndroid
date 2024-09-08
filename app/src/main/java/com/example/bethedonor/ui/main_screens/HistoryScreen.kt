@@ -57,6 +57,7 @@ import com.example.bethedonor.ui.utils.commons.showToast
 import com.example.bethedonor.utils.dateDiffInDays
 import com.example.bethedonor.utils.formatDate
 import com.example.bethedonor.viewmodels.HistoryViewModel
+import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.launch
 
 data class TabItem(
@@ -68,6 +69,7 @@ fun HistoryScreen(
     navController: NavHostController,
     historyViewModel: HistoryViewModel,
     innerPadding: PaddingValues,
+    sharedViewModel: SharedViewModel,
 ) {
     val context = LocalContext.current
     val tabItem = listOf(

@@ -27,9 +27,7 @@ data class RequestHistory(
 class HistoryViewModel(application: Application) : AndroidViewModel(application){
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
-    fun getUserId(): String? {
-        return preferencesManager.userId
-    }
+
     private fun getAuthToken():String?{
         return preferencesManager.jwtToken
     }

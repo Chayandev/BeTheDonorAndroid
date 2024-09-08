@@ -1,27 +1,21 @@
 package com.example.bethedonor.viewmodels
 
 import android.app.Application
-import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
-import com.example.bethedonor.data.dataModels.BackendResponse
 import com.example.bethedonor.data.dataModels.LogInResponse
 import com.example.bethedonor.data.preferences.PreferencesManager
 import com.example.bethedonor.data.repository.UserRepositoryImp
-import com.example.bethedonor.domain.usecase.ForgetPasswordUseCase
 import com.example.bethedonor.domain.usecase.LogInUserUseCase
 import com.example.bethedonor.ui.utils.uievent.LoginUIEvent
 import com.example.bethedonor.ui.utils.uistate.LoginUiState
 import com.example.bethedonor.ui.utils.validationRules.Validator
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class LoginViewModel(application: Application) : AndroidViewModel(application){
@@ -31,9 +25,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application){
     //*
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
-    fun getUserId(): String? {
-        return preferencesManager.userId
-    }
     fun getAuthToken():String?{
         return preferencesManager.jwtToken
     }
@@ -49,7 +40,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application){
     private val userRepository = UserRepositoryImp(apiService)
     private val logInUserUseCase = LogInUserUseCase(userRepository)
 
-    fun logInUser(onLogin: () -> Unit?) {
+    fun logInUser(onLogin: () -> Any?) {
         requestInProgress.value = true
         val email = loginUIState.value.emailId
         val password = loginUIState.value.password
@@ -60,7 +51,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application){
                 Log.d("Response", response.toString())
                 response.token?.let {
                     preferencesManager.jwtToken = it
-                    preferencesManager.userId = response.userId
                    // preferencesManager.availableToDonate=response.available
                 }
             } catch (e: Exception) {

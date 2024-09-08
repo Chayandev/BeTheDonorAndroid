@@ -30,9 +30,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
-    fun getUserId(): String? {
-        return preferencesManager.userId
-    }
     private fun getAuthToken():String?{
         return preferencesManager.jwtToken
     }
@@ -275,7 +272,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     suspend fun logoutUser(onLogout: () -> Unit) {
         preferencesManager.clearUserData()
         // Confirm the data has been cleared
-        if (preferencesManager.jwtToken.isNullOrEmpty() && preferencesManager.userId.isNullOrEmpty()) {
+        if (preferencesManager.jwtToken.isNullOrEmpty()) {
             onLogout()
         } else {
             Log.e("Logout Error", "Failed to clear user data")

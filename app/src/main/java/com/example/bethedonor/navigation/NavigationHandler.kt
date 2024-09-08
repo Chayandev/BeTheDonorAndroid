@@ -8,6 +8,8 @@ import androidx.compose.animation.core.EaseOutQuad
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.material3.Scaffold
@@ -25,15 +27,17 @@ import com.example.bethedonor.ui.main_screens.CreateRequestScreen
 import com.example.bethedonor.ui.main_screens.EditEmailScreen
 import com.example.bethedonor.ui.main_screens.HistoryScreen
 import com.example.bethedonor.ui.main_screens.HomeScreen
+import com.example.bethedonor.ui.main_screens.LoginScreen
 import com.example.bethedonor.ui.main_screens.ProfileScreen
+import com.example.bethedonor.ui.main_screens.RegistrationScreen
 import com.example.bethedonor.ui.theme.bgDarkBlue
 import com.example.bethedonor.ui.utils.BottomNavItem
 import com.example.bethedonor.viewmodels.MainViewModel
 
 @Composable
-fun AfterLogInNavigationStack(
+fun NavigationStack(
+    selectedDestination: Destination,
     navController: NavHostController,
-    onLogOut: () -> Unit,
     mainViewModel: MainViewModel,
 ) {
     // Get the current back stack entry state
@@ -52,7 +56,7 @@ fun AfterLogInNavigationStack(
         BottomNavItem.Home.route,
         BottomNavItem.Request.route,
         BottomNavItem.History.route,
-        BottomNavItem.Profile.route
+        BottomNavItem.Profile.route,
     )
 
     Log.d("CurrentRoute", "Current Route: $currentRoute")
@@ -68,7 +72,10 @@ fun AfterLogInNavigationStack(
                 ),
                 exit = slideOutVertically(
                     targetOffsetY = { fullHeight -> fullHeight },
-                    animationSpec = tween(durationMillis = 450, easing = FastOutLinearInEasing)
+                    animationSpec = tween(
+                        durationMillis = if (selectedDestination != Destination.Login) 600 else 0,
+                        easing = FastOutLinearInEasing
+                    )
                 )
             ) {
                 BottomNavBar(
@@ -115,20 +122,35 @@ fun AfterLogInNavigationStack(
         // Define the navigation graph for different screens
         NavHost(
             navController = navController,
-            startDestination = Destination.Home
+            startDestination = selectedDestination
         ) {
-            composable<Destination.Home> {
+            composable<Destination.Home>(
+                exitTransition = {
+                    return@composable slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        tween(300, easing = EaseInQuad)
+                    )
+                },
+                enterTransition = {
+                    return@composable slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        tween(300, easing = EaseOutQuad)
+                    )
+                }
+            ) {
                 HomeScreen(
                     navController = navController,
                     innerPadding,
-                    mainViewModel.homeViewModel
+                    mainViewModel.homeViewModel,
+                    mainViewModel.sharedViewModel
                 )
             }
             composable<Destination.AllRequest> {
                 AllRequestScreen(
                     navController = navController,
                     innerPadding = innerPadding,
-                    mainViewModel.allRequestViewModel
+                    mainViewModel.allRequestViewModel,
+                    mainViewModel.sharedViewModel
                 )
             }
             composable<Destination.CreateRequest>(
@@ -136,7 +158,7 @@ fun AfterLogInNavigationStack(
                     Log.d("Transition", "Enter transition triggered")
                     slideIntoContainer(
                         AnimatedContentTransitionScope.SlideDirection.Up,
-                        tween(durationMillis=700, easing = FastOutSlowInEasing)
+                        tween(durationMillis = 700, easing = FastOutSlowInEasing)
                     )
                 },
                 exitTransition = {
@@ -151,24 +173,44 @@ fun AfterLogInNavigationStack(
                     navController = navController,
                     innerPadding,
                     onDone = { navController.popBackStack() },
-                    mainViewModel.createRequestViewModel
+                    mainViewModel.createRequestViewModel,
+                    mainViewModel.sharedViewModel
                 )
             }
             composable<Destination.History> {
                 HistoryScreen(
                     navController = navController,
                     mainViewModel.historyViewModel,
-                    innerPadding
+                    innerPadding,
+                    mainViewModel.sharedViewModel
                 )
             }
-            composable<Destination.Profile> {
+            composable<Destination.Profile>(
+                enterTransition = {
+                    return@composable fadeIn(animationSpec = tween(300)) + slideInVertically(
+                        animationSpec = tween(300, easing = FastOutSlowInEasing),
+                        initialOffsetY = { -40 } // Starts from the top
+                    )
+                },
+                exitTransition = {
+                    return@composable fadeOut(animationSpec = tween(300)) + slideOutVertically(
+                        animationSpec = tween(300, easing = FastOutSlowInEasing),
+                        targetOffsetY = { -40 } // Exits to the bottom
+                    )
+                }
+            ) {
                 ProfileScreen(
                     innerPadding = innerPadding,
-                    onLogOutNavigate = onLogOut,
+                    onLogOutNavigate = {
+                        navController.navigate(Destination.Login) {
+                            popUpTo(0)
+                        }
+                    },
                     onEmailEditNavigate = {
                         navController.navigate(Destination.EmailEdit)
                     },
-                    profileViewmodel = mainViewModel.profileViewModel
+                    profileViewmodel = mainViewModel.profileViewModel,
+                   sharedViewModel = mainViewModel.sharedViewModel
                 )
             }
             composable<Destination.EmailEdit>(
@@ -187,8 +229,53 @@ fun AfterLogInNavigationStack(
             ) {
                 EditEmailScreen(
                     editEmailViewModel = mainViewModel.editEmailViewModel,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    sharedViewModel = mainViewModel.sharedViewModel
                 )
+            }
+            composable<Destination.Registration>(
+                exitTransition = {
+                    return@composable slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        tween(300, easing = EaseInQuad)
+                    )
+                },
+                enterTransition = {
+                    return@composable slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        tween(300, easing = EaseOutQuad)
+                    )
+                }
+            ) {
+                RegistrationScreen(onRegisterNavigate = {
+                    navController.navigate(Destination.Login) {
+                        popUpTo(0)
+                    }
+                })
+            }
+            composable<Destination.Login>(
+                exitTransition = {
+                    return@composable slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        tween(300, easing = EaseInQuad)
+                    )
+                },
+                enterTransition = {
+                    return@composable slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        tween(300, easing = EaseOutQuad)
+                    )
+                }
+            ) {
+                LoginScreen(onLoginNavigate = {
+                    navController.navigate(Destination.Home) {
+                        popUpTo(0)
+                    }
+                }, onRegisterNavigate = {
+                    navController.navigate(Destination.Registration) {
+                        // popUpTo(0)
+                    }
+                })
             }
         }
     }
