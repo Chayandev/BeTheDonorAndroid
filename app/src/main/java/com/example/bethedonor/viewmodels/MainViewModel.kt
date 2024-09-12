@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 // MainViewModel that holds other ViewModels
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Initialize ViewModels with Application context
+    val sharedViewModel: SharedViewModel by lazy { SharedViewModel() }
     val homeViewModel: HomeViewModel by lazy { HomeViewModel(application) }
     val profileViewModel: ProfileViewModel by lazy { ProfileViewModel(application) }
     val allRequestViewModel: AllRequestViewModel by lazy { AllRequestViewModel(application) }

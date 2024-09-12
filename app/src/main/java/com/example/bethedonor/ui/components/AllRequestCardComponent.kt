@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bethedonor.R
 import com.example.bethedonor.domain.model.RequestCardDetails
 import com.example.bethedonor.ui.theme.Gray1
@@ -71,13 +72,13 @@ import com.example.bethedonor.ui.theme.bloodTransparent
 import com.example.bethedonor.ui.theme.lightRed
 import com.example.bethedonor.ui.utils.commons.animatedBorder
 import com.example.bethedonor.viewmodels.AllRequestViewModel
+import com.example.bethedonor.viewmodels.SharedViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AllRequestCard(
     details: RequestCardDetails,
     viewModel: AllRequestViewModel,
-    token: String,
     id: String,
     onDonationClickResponse: (String) -> Unit
 ) {
@@ -508,10 +509,9 @@ fun AllRequestCardPreview() {
             isMyCreation = false,
         ),
         onDonationClickResponse = {},
-        token = "",
         id = "",
         //userAvailabilityStatus = false,
-        viewModel = AllRequestViewModel(application = Application())
+        viewModel = AllRequestViewModel(application = Application()),
     )
 
 }

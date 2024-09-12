@@ -11,13 +11,13 @@ class PreferencesManager(context: Context) {
         get() = sharedPreferences.getString("jwt_token", null)
         set(value) = sharedPreferences.edit().putString("jwt_token", value).apply()
 
-    var userId: String?
-        get() = sharedPreferences.getString("user_id", null)
-        set(value) = sharedPreferences.edit().putString("user_id", value).apply()
-
-    var userAvailabilityStatus: Boolean?
-        get()=sharedPreferences.getBoolean("userAvailabilityStatus",false)
-        set(value) = sharedPreferences.edit().putBoolean("userAvailabilityStatus",value!!).apply()
+//    var userId: String?
+//        get() = sharedPreferences.getString("user_id", null)
+//        set(value) = sharedPreferences.edit().putString("user_id", value).apply()
+//
+//    var userAvailabilityStatus: Boolean?
+//        get()=sharedPreferences.getBoolean("userAvailabilityStatus",false)
+//        set(value) = sharedPreferences.edit().putBoolean("userAvailabilityStatus",value!!).apply()
 
     // Method to clear user data
       fun clearUserData() {

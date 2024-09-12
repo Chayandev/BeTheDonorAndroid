@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
 import com.example.bethedonor.data.dataModels.BackendResponse
@@ -13,7 +12,6 @@ import com.example.bethedonor.data.dataModels.NewBloodRequest
 import com.example.bethedonor.data.preferences.PreferencesManager
 import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.domain.usecase.CreateRequestUseCase
-import com.example.bethedonor.domain.usecase.RegistrationUserUseCase
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
 import com.example.bethedonor.ui.utils.uistate.RegistrationUiState
 import com.example.bethedonor.ui.utils.validationRules.Validator
@@ -23,10 +21,7 @@ import kotlinx.coroutines.launch
 class CreateRequestViewModel(application: Application) : AndroidViewModel(application) {
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
-    fun getUserId(): String? {
-        return preferencesManager.userId
-    }
-    fun getAuthToken():String?{
+    private fun getAuthToken():String?{
         return preferencesManager.jwtToken
     }
     //**********************************
@@ -148,9 +143,23 @@ class CreateRequestViewModel(application: Application) : AndroidViewModel(applic
                 e.printStackTrace()
                 onCreated(BackendResponse(message = "Exception: ${e.message}"))
             } finally {
+                clearTheUiState()
                 requestInProgress.value = false
             }
         }
+    }
+
+    private fun clearTheUiState() {
+        newRequestUiState.value = RegistrationUiState(
+            state = "",
+            district = "",
+            city = "",
+            pinCode = "",
+            bloodGroup = "",
+            bloodUnit = "",
+            donationCenter = "",
+            date = ""
+        )
     }
 
     // Initialize selectedState
