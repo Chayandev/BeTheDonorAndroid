@@ -1,5 +1,8 @@
 package com.example.bethedonor.ui.main_screens
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -274,7 +277,9 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                     donors?.let {
                         LazyColumn {
                             items(items = donors, key = { it.phoneNumber }) { donor ->
-                                AcceptorDetailsCard(donnerDetails = donor)
+                                AcceptorDetailsCard(donnerDetails = donor, onCall = {phoneNo->
+                                    moveToCallActivity(context,phoneNo)
+                                })
                             }
                         }
                     }
@@ -301,6 +306,15 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
 
         }
     }
+}
+
+fun moveToCallActivity(context: Context,phoneNo: String) {
+    // Create an intent to open the dialer
+    val intent = Intent(Intent.ACTION_DIAL).apply {
+        data = Uri.parse("tel:$phoneNo")
+    }
+    // Start the activity
+    context.startActivity(intent)
 }
 
 

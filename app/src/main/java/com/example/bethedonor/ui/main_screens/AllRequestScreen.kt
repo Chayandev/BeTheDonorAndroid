@@ -3,6 +3,7 @@ package com.example.bethedonor.ui.main_screens
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,10 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -30,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,13 +51,14 @@ import com.example.bethedonor.ui.components.SearchBarComponent
 import com.example.bethedonor.ui.temporay_screen.LoadingScreen
 import com.example.bethedonor.ui.theme.bgDarkBlue
 import com.example.bethedonor.ui.theme.fadeBlue11
+import com.example.bethedonor.ui.theme.teal
+import com.example.bethedonor.ui.theme.transparentGray
 import com.example.bethedonor.utils.dateDiffInDays
 import com.example.bethedonor.utils.formatDate
 import com.example.bethedonor.utils.getCityList
 import com.example.bethedonor.utils.getDistrictList
 import com.example.bethedonor.utils.getPinCodeList
 import com.example.bethedonor.utils.getStateDataList
-import com.example.bethedonor.utils.isDeadlinePassed
 import com.example.bethedonor.viewmodels.AllRequestViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -86,23 +88,29 @@ fun AllRequestScreen(
     val filterDistrict by allRequestViewModel.filterDistrict.collectAsState()
     val filterCity by allRequestViewModel.filterCity.collectAsState()
     val filterPin by allRequestViewModel.filterPin.collectAsState()
-
-    var retryFlag by remember { mutableStateOf(false) }
-
+    val retryFlag by allRequestViewModel.retryFlag.collectAsState()
+    val switchStatus by allRequestViewModel.switchChecked.collectAsState()
     //*** Recomposition Count ***//
     val isRefreshing by allRequestViewModel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
+
+    val lazyListState = rememberLazyListState()
     //**********
-    val hasFetchedRequests = allRequestViewModel.getFetchedProfile()
+    val hasFetchedRequests by allRequestViewModel.hasFetchedResult.collectAsState()
     LaunchedEffect(hasFetchedRequests) {
         if (retryFlag || !hasFetchedRequests) {
             networkCall(
                 allRequestViewModel = allRequestViewModel,
             )
-            allRequestViewModel.setFetchedProfile(true)
+            allRequestViewModel.setFetchedResult(true)
+            allRequestViewModel.setRetryFlag(false)
         }
     }
-
+//    // Use LaunchedEffect to reset the scroll position when data changes
+//    LaunchedEffect(isRefreshing) {
+//        // Reset the scroll state to the top when the list changes
+//        lazyListState.scrollToItem(0)
+//    }
     Scaffold(
         topBar = {
             TopAppBarComponent(
@@ -111,7 +119,8 @@ fun AllRequestScreen(
                 filterState,
                 filterDistrict,
                 filterCity,
-                filterPin
+                filterPin,
+                switchStatus = switchStatus
             )
         },
         modifier = Modifier.nestedScroll(pullToRefreshState.nestedScrollConnection),
@@ -125,11 +134,11 @@ fun AllRequestScreen(
                     val bloodRequestsWithUsers = if (result.isSuccess) {
                         result.getOrNull()
                     } else {
-                        retryFlag = true
+                        allRequestViewModel.setRetryFlag(true)
                         listOf()
                     }
                     bloodRequestsWithUsers?.let {
-                        LazyColumn(state = rememberLazyListState()) {
+                        LazyColumn(state = lazyListState) {
                             item {
                                 Spacer(modifier = Modifier.height(padding.calculateTopPadding()))
                             }
@@ -168,7 +177,7 @@ fun AllRequestScreen(
                                     noOfAcceptors = requestWithUser.bloodRequest.donors.size,
                                     dueDate = formatDate(requestWithUser.bloodRequest.deadline),
                                     postDate = dateDiffInDays(requestWithUser.bloodRequest.createdAt).toString(),
-                                    isOpen = !isDeadlinePassed(requestWithUser.bloodRequest.deadline),
+                                    isOpen = !requestWithUser.bloodRequest.isClosed,
                                     isAcceptor = isDonor.value,
                                     isMyCreation = iSUserCreation.value
                                 )
@@ -188,13 +197,9 @@ fun AllRequestScreen(
                     } ?: EmptyStateComponent()
                 }
             }
-            if (isLoading && !isRefreshing) {
-                LoadingScreen()
-                retryFlag = false
-            }
             if (retryFlag) {
                 Retry(message = stringResource(id = R.string.retry), onRetry = {
-                    retryFlag = false
+                    allRequestViewModel.setRetryFlag(false)
                     networkCall(
                         allRequestViewModel = allRequestViewModel,
                     )
@@ -222,6 +227,9 @@ fun AllRequestScreen(
             }
         }
     }
+    if (isLoading && !isRefreshing) {
+        LoadingScreen()
+    }
 }
 
 @Composable
@@ -236,7 +244,8 @@ fun TopAppBarComponent(
     filterState: String,
     filterDistrict: String,
     filterCity: String,
-    filterPin: String
+    filterPin: String,
+    switchStatus: Boolean
 ) {
     Box(
         modifier = Modifier
@@ -257,13 +266,40 @@ fun TopAppBarComponent(
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                SearchBarComponent(
-                    searchQuery = searchText,
-                    onSearchQueryChange = {
-                        allRequestViewModel.onSearchTextChange(it)
-                    },
-                    modifier = Modifier.fillMaxWidth()//.border(1.dp, bloodRed2, shape = RoundedCornerShape(8.dp)))
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SearchBarComponent(
+                        searchQuery = searchText,
+                        onSearchQueryChange = {
+                            allRequestViewModel.onSearchTextChange(it)
+                        },
+                        modifier = Modifier.weight(1f)//.border(1.dp, bloodRed2, shape = RoundedCornerShape(8.dp)))
+                    )
+                    Switch(
+                        checked = switchStatus,
+                        onCheckedChange = {
+                            allRequestViewModel.setSwitchChecked(it)
+                        },
+                        enabled = !allRequestViewModel.isRequestFetching.collectAsState().value && !allRequestViewModel.isRefreshing.collectAsState().value,
+                        colors = SwitchDefaults.colors(
+                            checkedBorderColor = Color.Transparent,
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = teal,
+                            uncheckedBorderColor = transparentGray,
+                            uncheckedTrackColor = Color.Transparent,
+                            uncheckedThumbColor = transparentGray,
+                            disabledUncheckedThumbColor = transparentGray,
+                            disabledUncheckedTrackColor = Color.Transparent,
+                            disabledUncheckedBorderColor = transparentGray,
+                        ),
+                        interactionSource = remember {
+                            MutableInteractionSource()
+                        }
+                    )
+                }
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

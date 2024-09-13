@@ -124,13 +124,14 @@ fun ProfileScreen(
         skipPartiallyExpanded = true
     )
     var showBottomSheetForEditProfile by remember { mutableStateOf(false) }
-    var retryFlag by remember { mutableStateOf(false) }
+    val retryFlag by profileViewmodel.retryFlag.collectAsState()
     val isRefreshing by profileViewmodel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
     //**********
 
     val hasFetchedProfile = profileViewmodel.getFetchedProfile()
     LaunchedEffect(Unit) {
+        Log.d("retryFlagFromProfile",retryFlag.toString())
         if (retryFlag || !hasFetchedProfile) {
             networkCall(profileViewmodel)
             profileViewmodel.setFetchedProfile(true)
@@ -156,7 +157,7 @@ fun ProfileScreen(
                     profileData.value = if (result.getOrNull()?.myProfile != null) {
                         result.getOrNull()?.myProfile
                     } else {
-                        retryFlag = true
+                        profileViewmodel.setRetryFlag(true)
                         null
                     }
                     profileData.value?.let {
@@ -683,20 +684,20 @@ fun ProfileScreen(
         }
 
         if (profileViewmodel.requestInProgress.value && !isRefreshing) {
-            retryFlag = false
+            profileViewmodel.setRetryFlag(false)
             ProgressIndicatorComponent(label = stringResource(id = R.string.loading_indicator))
         }
         if (profileViewmodel.deletingAccountProgress.value) {
-            retryFlag = false
+            profileViewmodel.setRetryFlag(false)
             ProgressIndicatorComponent(label = stringResource(id = R.string.delete_account_indicator))
         }
         if (profileViewmodel.updatingProfileInProgress.value) {
-            retryFlag = false
+            profileViewmodel.setRetryFlag(false)
             ProgressIndicatorComponent(label = stringResource(id = R.string.updating_profile_indicator))
         }
         if (retryFlag) {
             Retry(message = stringResource(id = R.string.retry), onRetry = {
-                retryFlag = false
+                profileViewmodel.setRetryFlag(false)
                 networkCall(
                     profileViewmodel,
                 )

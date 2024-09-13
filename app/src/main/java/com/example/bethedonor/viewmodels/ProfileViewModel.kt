@@ -187,6 +187,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _profileResponse = MutableStateFlow<Result<ProfileResponse>?>(null)
     val profileResponse: StateFlow<Result<ProfileResponse>?> = _profileResponse
 
+    private val _retryFlag = MutableStateFlow(false)
+    val retryFlag: StateFlow<Boolean> get() = _retryFlag
+    fun setRetryFlag(value: Boolean) {
+        _retryFlag.value = value
+    }
+
+
     private val _deleteAccountResponse = MutableStateFlow<Result<AccountResponse>?>(null)
     val deleteAccountResponse: StateFlow<Result<AccountResponse>?> = _deleteAccountResponse
 

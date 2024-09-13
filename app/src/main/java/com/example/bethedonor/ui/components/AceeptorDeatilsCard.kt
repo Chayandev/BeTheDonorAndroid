@@ -43,7 +43,7 @@ import com.example.bethedonor.ui.theme.fadeBlue2
 
 
 @Composable
-fun AcceptorDetailsCard(donnerDetails: Donor) {
+fun AcceptorDetailsCard(donnerDetails: Donor,onCall:(String)->Unit) {
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
@@ -133,7 +133,7 @@ fun AcceptorDetailsCard(donnerDetails: Donor) {
                                 .width(40.dp)
                                 .background(fadeBlue1, RoundedCornerShape(30.dp))
                                 .clickable {
-                                    //
+                                    onCall(donnerDetails.phoneNumber)
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -165,6 +165,7 @@ fun AcceptorDetailsCardPreview() {
             district = "Dhapa",
             pin = "700105",
             bloodGroup = "B+",
-        )
+        ),
+        onCall = {}
     )
 }

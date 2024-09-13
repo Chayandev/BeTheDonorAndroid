@@ -42,6 +42,6 @@
     <string name="otp_custom_image_desc">Custom Image</string>
     <string name="back">Back</string>
     <string name="otp_digit_field">OTP Digit Field</string>
-    <string name="status_code_success">Success</string>
+    <string name="status_code_success">200</string>
     <string name="no_acceptors">No Acceptors</string>
 </resources>
