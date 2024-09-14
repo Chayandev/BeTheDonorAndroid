@@ -1,11 +1,9 @@
 package com.example.bethedonor.viewmodels
 
 import android.app.Application
-import android.media.session.MediaSession.Token
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
 import com.example.bethedonor.data.dataModels.BackendOTPResponse
@@ -18,12 +16,13 @@ import com.example.bethedonor.domain.usecase.ChangeEmailIDUseCase
 import com.example.bethedonor.domain.usecase.VerifyOTPUseCase
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
 import com.example.bethedonor.ui.utils.uistate.RegistrationUiState
-import com.example.bethedonor.ui.utils.validationRules.Validator
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
+import com.example.bethedonor.utils.Validator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class EditEmailViewModel(application: Application) : AndroidViewModel(application) {
+class EditEmailViewModel(application: Application, networkMonitor: NetworkConnectivityMonitor) : AndroidViewModel(application) {
 
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())

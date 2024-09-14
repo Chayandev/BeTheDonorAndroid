@@ -1,7 +1,6 @@
-package com.example.bethedonor.utils
+package com.example.bethedonor.constants
 
 import android.content.Context
-import androidx.compose.runtime.mutableStateOf
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.IOException

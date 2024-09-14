@@ -1,4 +1,4 @@
-package com.example.bethedonor.ui.utils.validationRules
+package com.example.bethedonor.utils
 
 import android.util.Log
 import android.util.Patterns

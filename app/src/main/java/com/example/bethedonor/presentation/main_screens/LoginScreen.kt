@@ -1,4 +1,4 @@
-package com.example.bethedonor.ui.main_screens
+package com.example.bethedonor.presentation.main_screens
 
 import android.app.Application
 import androidx.compose.foundation.background
@@ -47,7 +47,7 @@ import com.example.bethedonor.ui.components.SimpleTextWithSpan
 import com.example.bethedonor.ui.components.SubGreetText
 import com.example.bethedonor.ui.theme.fadeBlue1
 import com.example.bethedonor.ui.theme.fadeBlue2
-import com.example.bethedonor.ui.utils.validationRules.ValidationResult
+import com.example.bethedonor.utils.ValidationResult
 import com.example.bethedonor.viewmodels.LoginViewModel
 import kotlinx.coroutines.launch
 

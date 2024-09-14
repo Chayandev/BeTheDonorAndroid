@@ -15,11 +15,10 @@ import com.example.bethedonor.navigation.NavigationStack
 import com.example.bethedonor.navigation.Destination
 import com.example.bethedonor.ui.theme.BeTheDonorTheme
 import com.example.bethedonor.ui.theme.bgDarkBlue
-import com.example.bethedonor.ui.theme.fadeBlue1
 import com.example.bethedonor.ui.theme.fadeBlue11
-import com.example.bethedonor.ui.theme.fadeBlue2
-import com.example.bethedonor.utils.readJsonFromAssets
-import com.example.bethedonor.utils.setAreaData
+import com.example.bethedonor.constants.readJsonFromAssets
+import com.example.bethedonor.constants.setAreaData
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.viewmodels.LoginViewModel
 import com.example.bethedonor.viewmodels.MainViewModel
 import com.example.bethedonor.viewmodels.MainViewModelFactory
@@ -29,28 +28,27 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
+    // Lazily initialize NetworkConnectivityMonitor
+    private val networkMonitor by lazy { NetworkConnectivityMonitor(this@MainActivity) }
+
+    // Initialize MainViewModel with a factory
     private val mainViewModel: MainViewModel by viewModels {
-        MainViewModelFactory(application)
+        MainViewModelFactory(application, networkMonitor)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        lifecycleScope.launch {
-            val areaData = withContext(Dispatchers.IO) {
-                readJsonFromAssets(this@MainActivity, "Location.json")
-            }
-            areaData?.let {
-                setAreaData(it)
-            }
-        }
 
-        //    WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Load area data in a background thread
+        loadAreaData()
+        // Set content for the activity
         setContent {
             BeTheDonorTheme {
-                // Initialize the ViewModel
+                // ViewModel initialization
                 val loginViewModel: LoginViewModel = viewModel()
-                // Check if the user is logged in and determine the start destination
                 val isUserLoggedIn = loginViewModel.isUserLoggedIn()
+
+                // System UI controller to set the system bar color
                 val systemUiController = rememberSystemUiController()
                 SideEffect {
                     systemUiController.setSystemBarsColor(
@@ -58,16 +56,15 @@ class MainActivity : ComponentActivity() {
                         darkIcons = false
                     )
                 }
-                // A surface container using the 'background' color from the theme
+
+                // Define the start destination based on login status
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = bgDarkBlue
                 ) {
-                    // Navigate to the appropriate screen based on the user's login status
-                    val selectedDestination =
-                        if (isUserLoggedIn) Destination.Home else Destination.Login
+                    val startDestination = if (isUserLoggedIn) Destination.Home else Destination.Login
                     NavigationStack(
-                        selectedDestination = selectedDestination,
+                        selectedDestination = startDestination,
                         navController = rememberNavController(),
                         mainViewModel = mainViewModel
                     )
@@ -76,4 +73,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Function to load area data asynchronously
+    private fun loadAreaData() {
+        lifecycleScope.launch {
+            val areaData = withContext(Dispatchers.IO) {
+                readJsonFromAssets(this@MainActivity, "Location.json")
+            }
+            areaData?.let {
+                setAreaData(it)
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Unregister the network callback to avoid memory leaks
+        networkMonitor.unregisterCallback()
+    }
 }

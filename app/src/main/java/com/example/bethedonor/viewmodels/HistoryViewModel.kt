@@ -3,7 +3,6 @@ package com.example.bethedonor.viewmodels
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
 import com.example.bethedonor.data.dataModels.BackendResponse
@@ -15,7 +14,7 @@ import com.example.bethedonor.domain.usecase.DeleteRequestUseCase
 import com.example.bethedonor.domain.usecase.GetDonorListUseCase
 import com.example.bethedonor.domain.usecase.GetRequestHistoryUseCase
 import com.example.bethedonor.domain.usecase.ToggleRequestStatusUseCase
-import com.squareup.kotlinpoet.MUTABLE_MAP
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -24,7 +23,7 @@ data class RequestHistory(
     val bloodRequest: BloodRequest
 )
 
-class HistoryViewModel(application: Application) : AndroidViewModel(application){
+class HistoryViewModel(application: Application, networkMonitor: NetworkConnectivityMonitor) : AndroidViewModel(application){
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
 

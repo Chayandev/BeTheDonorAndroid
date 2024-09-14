@@ -58,7 +58,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bethedonor.R
 import com.example.bethedonor.domain.model.RequestCardDetails
 import com.example.bethedonor.ui.theme.Gray1
@@ -72,7 +71,6 @@ import com.example.bethedonor.ui.theme.bloodTransparent
 import com.example.bethedonor.ui.theme.lightRed
 import com.example.bethedonor.ui.utils.commons.animatedBorder
 import com.example.bethedonor.viewmodels.AllRequestViewModel
-import com.example.bethedonor.viewmodels.SharedViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -487,31 +485,4 @@ fun RoundedBoxWithIconAndText(modifier: Modifier = Modifier, open: Boolean) {
             )
         }
     }
-}
-
-@Preview
-@Composable
-fun AllRequestCardPreview() {
-    AllRequestCard(
-        details = RequestCardDetails(
-            name = "Chayandev Bera",
-            emailId = "abcd@gmail.com",
-            phoneNo = "6549680439",
-            address = "West Bengal, Kolkata\n Dhapa, 700105",
-            exactPlace = "NRS",
-            bloodUnit = "10",
-            bloodGroup = "B+",
-            noOfAcceptors = 20,
-            dueDate = "Sun July 2024",
-            postDate = "Fri July 2024",
-            isOpen = true,
-            isAcceptor = false,
-            isMyCreation = false,
-        ),
-        onDonationClickResponse = {},
-        id = "",
-        //userAvailabilityStatus = false,
-        viewModel = AllRequestViewModel(application = Application()),
-    )
-
 }

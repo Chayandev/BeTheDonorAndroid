@@ -1,7 +1,6 @@
 package com.example.bethedonor.viewmodels
 
 import android.util.Log
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -15,10 +14,11 @@ import com.example.bethedonor.data.dataModels.UserBase
 import com.example.bethedonor.domain.usecase.RegistrationUserUseCase
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
 import com.example.bethedonor.ui.utils.uistate.RegistrationUiState
-import com.example.bethedonor.ui.utils.validationRules.Validator
+import com.example.bethedonor.utils.Validator
 import com.example.bethedonor.utils.toDate
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 
 
 class RegistrationViewModel() : ViewModel() {
@@ -33,7 +33,7 @@ class RegistrationViewModel() : ViewModel() {
     private val registrationUserUseCase = RegistrationUserUseCase(userRepository)
 
     fun registerUser(onRegister: () -> Unit?) {
-        requestInProgress.value = true
+        _requestInProgress.value = true
         val dob = (registrationUIState.value.date.toDate())!!
         val userBase = UserBase(
             registrationUIState.value.name,
@@ -63,69 +63,55 @@ class RegistrationViewModel() : ViewModel() {
                 e.stackTrace
                 _registrationResponse.value = Result.failure(e)
             } finally {
-                requestInProgress.value = false
+                _requestInProgress.value = false
                 onRegister()
             }
         }
     }
 
     // Initialize selectedState
-    var selectedState: MutableState<String?> = mutableStateOf(null)
-    var selectedDistrict: MutableState<String?> = mutableStateOf(null)
-    var selectedCity: MutableState<String?> = mutableStateOf(null)
-    var selectedPinCode: MutableState<String?> = mutableStateOf(null)
-    var availableToDonate: MutableState<Boolean> = mutableStateOf(true)
-    var requestInProgress = mutableStateOf(false)
+    // MutableStateFlow for UI state
+    private val _selectedState = MutableStateFlow("")
+    val selectedState: StateFlow<String> = _selectedState
 
-//    fun setAreaData(data: AreaData?) {
-//        areaData.value = data
-//    }
+    private val _selectedDistrict = MutableStateFlow("")
+    val selectedDistrict: StateFlow<String>  = _selectedDistrict
 
-//    fun getStateDataList(): List<String> {
-//        return areaData.value?.states?.keys?.toList() ?: emptyList()
-//    }
-//
-//    fun getDistrictList(): List<String> {
-//        return selectedState.value?.let { areaData.value?.states?.get(it)?.keys?.toList() }
-//            ?: emptyList()
-//    }
-//
-//    fun getCityList(): List<String> {
-//        return selectedDistrict.value?.let {
-//            areaData.value?.states?.get(selectedState.value)?.get(it)?.keys?.toList()
-//        } ?: emptyList()
-//    }
-//
-//    fun getPinCodeList(): List<String> {
-//        return selectedCity.value?.let {
-//            areaData.value?.states?.get(selectedState.value)?.get(selectedDistrict.value)
-//                ?.get(it)
-//        }?.let { listOf(it) } ?: emptyList()
-//    }
+    private val _selectedCity = MutableStateFlow("")
+    val selectedCity: StateFlow<String> = _selectedCity
+
+    private val _selectedPinCode = MutableStateFlow("")
+    val selectedPinCode: StateFlow<String> = _selectedPinCode
+
+    private val _availableToDonate = MutableStateFlow(false)
+    val availableToDonate: StateFlow<Boolean> = _availableToDonate
+
+    private val _requestInProgress = MutableStateFlow(false)
+    val requestInProgress: StateFlow<Boolean> = _requestInProgress
 
     fun selectState(state: String) {
-        selectedState.value = state
-        selectedDistrict.value = null
-        selectedCity.value = null
-        selectedPinCode.value = null
+        _selectedState.value = state
+        _selectedDistrict.value = ""
+        _selectedCity.value = ""
+        _selectedPinCode.value = ""
     }
 
     fun selectDistrict(district: String) {
-        selectedDistrict.value = district
-        selectedCity.value = null
-        selectedPinCode.value = null
+        _selectedDistrict.value = district
+        _selectedCity.value = ""
+        _selectedPinCode.value = ""
     }
 
     fun selectPin(pinCode: String) {
-        selectedPinCode.value = pinCode
-        selectedCity.value=null
+        _selectedPinCode.value = pinCode
+        _selectedCity.value=""
     }
     fun selectCity(city: String) {
-        selectedCity.value = city
+        _selectedCity.value = city
     }
 
     fun setAvailableToDonate(value: Boolean) {
-        availableToDonate.value = value
+        _availableToDonate.value = value
     }
 
     fun onEvent(event: RegistrationUIEvent) {
@@ -246,11 +232,6 @@ class RegistrationViewModel() : ViewModel() {
                 && registrationUIState.value.pinCodeErrorState.status
                 && registrationUIState.value.passwordErrorState.status
                 && registrationUIState.value.confirmPasswordState.status
-
-//        return registrationUIState.value.nameErrorState.status
-//                && registrationUIState.value.emailIdErrorState.status
-//                && registrationUIState.value.phoneNoErrorState.status
-//                && registrationUIState.value.passwordErrorState.status
     }
 
 

@@ -2,11 +2,8 @@ package com.example.bethedonor.viewmodels
 
 import android.app.Application
 import android.util.Log
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
 import com.example.bethedonor.data.dataModels.AccountResponse
@@ -19,13 +16,14 @@ import com.example.bethedonor.domain.usecase.GetUserProfileUseCase
 import com.example.bethedonor.domain.usecase.UpdateProfileUseCase
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
 import com.example.bethedonor.ui.utils.uistate.RegistrationUiState
-import com.example.bethedonor.ui.utils.validationRules.Validator
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
+import com.example.bethedonor.utils.Validator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ProfileViewModel(application: Application) : AndroidViewModel(application) {
+class ProfileViewModel(application: Application, private  val networkMonitor: NetworkConnectivityMonitor) : AndroidViewModel(application) {
 
 
     // ***** access the datastore ***** //
@@ -126,51 +124,73 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 && updateProfileUiState.value.pinCodeErrorState.status
     }
 
-    var selectedState: MutableState<String?> = mutableStateOf(null)
-    var selectedDistrict: MutableState<String?> = mutableStateOf(null)
-    var selectedCity: MutableState<String?> = mutableStateOf(null)
-    var selectedPinCode: MutableState<String?> = mutableStateOf(null)
-    var availableToDonate: MutableState<Boolean> = mutableStateOf(true)
+    private val _selectedState = MutableStateFlow("")
+    val selectedState: StateFlow<String> = _selectedState
 
+    private val _selectedDistrict = MutableStateFlow("")
+    val selectedDistrict: StateFlow<String>  = _selectedDistrict
+
+    private val _selectedCity = MutableStateFlow("")
+    val selectedCity: StateFlow<String> = _selectedCity
+
+    private val _selectedPinCode = MutableStateFlow("")
+    val selectedPinCode: StateFlow<String> = _selectedPinCode
+
+    private val _availableToDonate = MutableStateFlow(false)
+    val availableToDonate: StateFlow<Boolean> = _availableToDonate
+
+    fun setAllProfileDetails(state:String,district:String,city:String,pin:String,available:Boolean){
+        _selectedState.value=state
+        _selectedDistrict.value=district
+        _selectedCity.value=city
+        _selectedPinCode.value=pin
+        _availableToDonate.value=available
+    }
 
     fun selectState(state: String) {
-        selectedState.value = state
-        selectedDistrict.value = null
-        selectedCity.value = null
-        selectedPinCode.value = null
+        _selectedState.value = state
+        clearSelectionsFor("state")
     }
 
     fun selectDistrict(district: String) {
-        selectedDistrict.value = district
-        selectedCity.value = null
-        selectedPinCode.value = null
+        _selectedDistrict.value = district
+       clearSelectionsFor("district")
     }
 
     fun selectPin(pinCode: String) {
-        selectedPinCode.value = pinCode
-        selectedCity.value=null
+        _selectedPinCode.value = pinCode
+        clearSelectionsFor("pin")
     }
 
     fun selectCity(city: String) {
-        selectedCity.value = city
+        _selectedCity.value = city
     }
 
     fun setAvailableToDonate(value: Boolean) {
-        availableToDonate.value = value
+        _availableToDonate.value = value
     }
-
+    // Clear dependent selections based on the selected field
+    private fun clearSelectionsFor(level: String) {
+        Log.d("clearSelection",level)
+        when (level) {
+            "state" -> {
+                Log.d("clearSelection",level)
+                _selectedDistrict.value=""
+                _selectedCity.value = ""
+                _selectedPinCode.value = ""
+            }
+            "district" -> {
+                Log.d("clearSelection",level)
+                _selectedCity.value = ""
+                _selectedPinCode.value = ""
+            }
+            "pin"->{
+                Log.d("clearSelection",level)
+                _selectedCity.value = ""
+            }
+        }
+    }
     // Edit Email address here and OTP validation **********
-    private val _editEmailScreen = MutableStateFlow(false)
-    val editEmailScreen: StateFlow<Boolean> get() = _editEmailScreen
-    fun setEditEmailScreen(value: Boolean) {
-        _editEmailScreen.value = value
-    }
-    private val _otpDialog = MutableStateFlow(false)
-    val otpDialog: StateFlow<Boolean> get() = _otpDialog
-    fun setOTPDialog(value: Boolean) {
-        _otpDialog.value = value
-    }
-
 
     //****************************************************
 
@@ -186,6 +206,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     //*** api-responses ***//
     private val _profileResponse = MutableStateFlow<Result<ProfileResponse>?>(null)
     val profileResponse: StateFlow<Result<ProfileResponse>?> = _profileResponse
+
+    private val _retryFlag = MutableStateFlow(false)
+    val retryFlag: StateFlow<Boolean> get() = _retryFlag
+    fun setRetryFlag(value: Boolean) {
+        _retryFlag.value = value
+    }
+
 
     private val _deleteAccountResponse = MutableStateFlow<Result<AccountResponse>?>(null)
     val deleteAccountResponse: StateFlow<Result<AccountResponse>?> = _deleteAccountResponse

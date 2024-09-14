@@ -1,5 +1,8 @@
-package com.example.bethedonor.ui.main_screens
+package com.example.bethedonor.presentation.main_screens
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -54,6 +57,7 @@ import com.example.bethedonor.ui.theme.bloodRed2
 import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.theme.lightGray
 import com.example.bethedonor.ui.utils.commons.showToast
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.utils.dateDiffInDays
 import com.example.bethedonor.utils.formatDate
 import com.example.bethedonor.viewmodels.HistoryViewModel
@@ -274,7 +278,9 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                     donors?.let {
                         LazyColumn {
                             items(items = donors, key = { it.phoneNumber }) { donor ->
-                                AcceptorDetailsCard(donnerDetails = donor)
+                                AcceptorDetailsCard(donnerDetails = donor, onCall = {phoneNo->
+                                    moveToCallActivity(context,phoneNo)
+                                })
                             }
                         }
                     }
@@ -301,6 +307,15 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
 
         }
     }
+}
+
+fun moveToCallActivity(context: Context,phoneNo: String) {
+    // Create an intent to open the dialer
+    val intent = Intent(Intent.ACTION_DIAL).apply {
+        data = Uri.parse("tel:$phoneNo")
+    }
+    // Start the activity
+    context.startActivity(intent)
 }
 
 
