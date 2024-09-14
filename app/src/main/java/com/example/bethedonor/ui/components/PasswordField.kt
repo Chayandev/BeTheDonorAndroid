@@ -32,7 +32,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bethedonor.ui.utils.validationRules.ValidationResult
+import com.example.bethedonor.utils.ValidationResult
 import com.example.bethedonor.ui.theme.ErrorColor
 import com.example.bethedonor.ui.theme.Gray1
 import com.example.bethedonor.ui.theme.teal

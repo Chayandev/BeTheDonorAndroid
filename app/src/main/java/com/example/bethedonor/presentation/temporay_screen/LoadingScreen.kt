@@ -1,4 +1,4 @@
-package com.example.bethedonor.ui.temporay_screen
+package com.example.bethedonor.presentation.temporay_screen
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas

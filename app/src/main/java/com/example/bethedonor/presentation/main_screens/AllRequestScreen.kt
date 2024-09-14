@@ -1,4 +1,4 @@
-package com.example.bethedonor.ui.main_screens
+package com.example.bethedonor.presentation.main_screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -48,17 +48,19 @@ import com.example.bethedonor.ui.components.AllRequestCard
 import com.example.bethedonor.ui.components.FilterItemComponent
 import com.example.bethedonor.ui.components.Retry
 import com.example.bethedonor.ui.components.SearchBarComponent
-import com.example.bethedonor.ui.temporay_screen.LoadingScreen
+import com.example.bethedonor.presentation.temporay_screen.LoadingScreen
 import com.example.bethedonor.ui.theme.bgDarkBlue
 import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.theme.teal
 import com.example.bethedonor.ui.theme.transparentGray
 import com.example.bethedonor.utils.dateDiffInDays
 import com.example.bethedonor.utils.formatDate
-import com.example.bethedonor.utils.getCityList
-import com.example.bethedonor.utils.getDistrictList
-import com.example.bethedonor.utils.getPinCodeList
-import com.example.bethedonor.utils.getStateDataList
+import com.example.bethedonor.constants.getCityList
+import com.example.bethedonor.constants.getDistrictList
+import com.example.bethedonor.constants.getPinCodeList
+import com.example.bethedonor.constants.getStateDataList
+import com.example.bethedonor.presentation.temporay_screen.NetworkFailureScreen
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.viewmodels.AllRequestViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -73,7 +75,7 @@ fun AllRequestScreen(
     navController: NavController,
     innerPadding: PaddingValues,
     allRequestViewModel: AllRequestViewModel,
-    sharedViewModel: SharedViewModel
+    sharedViewModel: SharedViewModel,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -90,20 +92,18 @@ fun AllRequestScreen(
     val filterPin by allRequestViewModel.filterPin.collectAsState()
     val retryFlag by allRequestViewModel.retryFlag.collectAsState()
     val switchStatus by allRequestViewModel.switchChecked.collectAsState()
-    //*** Recomposition Count ***//
+    val isNetworkConnected by allRequestViewModel.isNetworkConnected.collectAsState()
     val isRefreshing by allRequestViewModel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
 
     val lazyListState = rememberLazyListState()
     //**********
     val hasFetchedRequests by allRequestViewModel.hasFetchedResult.collectAsState()
-    LaunchedEffect(hasFetchedRequests) {
-        if (retryFlag || !hasFetchedRequests) {
+    LaunchedEffect(isNetworkConnected) {
+        if (isNetworkConnected && (retryFlag || !hasFetchedRequests)) {
             networkCall(
                 allRequestViewModel = allRequestViewModel,
             )
-            allRequestViewModel.setFetchedResult(true)
-            allRequestViewModel.setRetryFlag(false)
         }
     }
 //    // Use LaunchedEffect to reset the scroll position when data changes
@@ -134,7 +134,6 @@ fun AllRequestScreen(
                     val bloodRequestsWithUsers = if (result.isSuccess) {
                         result.getOrNull()
                     } else {
-                        allRequestViewModel.setRetryFlag(true)
                         listOf()
                     }
                     bloodRequestsWithUsers?.let {
@@ -199,7 +198,6 @@ fun AllRequestScreen(
             }
             if (retryFlag) {
                 Retry(message = stringResource(id = R.string.retry), onRetry = {
-                    allRequestViewModel.setRetryFlag(false)
                     networkCall(
                         allRequestViewModel = allRequestViewModel,
                     )
@@ -229,6 +227,13 @@ fun AllRequestScreen(
     }
     if (isLoading && !isRefreshing) {
         LoadingScreen()
+    }
+    if(!isNetworkConnected){
+         NetworkFailureScreen(onRetry = {
+             networkCall(
+                 allRequestViewModel = allRequestViewModel,
+             )
+         })
     }
 }
 
@@ -374,6 +379,6 @@ fun AllRequestScreenPreview() {
         navController = NavController(LocalContext.current),
         innerPadding = PaddingValues(0.dp),
         allRequestViewModel = viewModel(),
-        sharedViewModel = viewModel()
+        sharedViewModel = viewModel(),
     )
 }

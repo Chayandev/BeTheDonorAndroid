@@ -7,7 +7,6 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,14 +22,9 @@ import androidx.compose.material3.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -38,19 +32,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -60,60 +52,53 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bethedonor.ui.utils.validationRules.ValidationResult
+import com.example.bethedonor.utils.ValidationResult
 import com.example.bethedonor.ui.theme.ErrorColor
 import com.example.bethedonor.ui.theme.Gray1
-import com.example.bethedonor.ui.theme.bgDarkBlue
-import com.example.bethedonor.ui.theme.bgDarkBlue2
-import com.example.bethedonor.ui.theme.darkGray
 import com.example.bethedonor.ui.theme.fadeBlue1
 import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.theme.teal
-import com.example.bethedonor.ui.utils.commons.linearGradientBrush
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectStateDistrictCityField(
     label: String,
     options: List<String>,
-    selectedValue: String?,
+    selectedValue: String,
     onSelection: (String) -> ValidationResult,
-    recheckFiled: Boolean = false,
+    recheckField: Boolean = false,
     modifier: Modifier,
     onSearchTextFieldClicked: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var isErrorState by rememberSaveable { mutableStateOf(false) }
     var supportingTextState by rememberSaveable { mutableStateOf("") }
-    var searchText by rememberSaveable {
-        mutableStateOf(
-            selectedValue ?: ""
-        )
-    } // Display selected value
-    var dropdownSearchText by rememberSaveable { mutableStateOf("") } // Search text for filtering options
+    var searchText by remember { mutableStateOf(selectedValue) } // Initialize with selectedValue
+    var dropdownSearchText by rememberSaveable { mutableStateOf("") }
+
+    // Update searchText whenever selectedValue changes
+    val updatedSelectedValue by rememberUpdatedState(selectedValue)
+    LaunchedEffect(updatedSelectedValue) {
+        searchText = updatedSelectedValue
+    }
 
     val filteredOptions = options.filter {
-        it.contains(
-            dropdownSearchText,
-            ignoreCase = true
-        )
-    } // Filtered options based on search
+        it.contains(dropdownSearchText, ignoreCase = true)
+    }
+
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
-    var textFieldWidth = configuration.screenWidthDp.dp
+    val textFieldWidth = configuration.screenWidthDp.dp
     val density = LocalDensity.current
-
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
-
-    // Main input field - Read-Only
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         OutlinedTextField(
-            readOnly = true,  // Set to read-only
+            readOnly = true,
             label = { Text(text = label, fontSize = 14.sp) },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
@@ -135,8 +120,8 @@ fun SelectStateDistrictCityField(
             ),
             textStyle = TextStyle(color = Color.White),
             shape = RoundedCornerShape(16.dp),
-            isError = if (recheckFiled) {
-                val result = onSelection(searchText) // Validate based on the selected value
+            isError = if (recheckField) {
+                val result = onSelection(searchText)
                 supportingTextState = result.errorComment
                 isErrorState = !result.status
                 isErrorState
@@ -150,14 +135,10 @@ fun SelectStateDistrictCityField(
                     )
                 }
             },
-            value = searchText, // Display the selected value
+            value = searchText,
             onValueChange = { /* No action needed since it is read-only */ },
             modifier = Modifier
-//                .menuAnchor()
                 .fillMaxWidth(),
-//                .onGloballyPositioned { coordinates ->
-//                    textFieldWidth = with(density) { coordinates.size.width.toDp() }
-//                },
             interactionSource = remember { MutableInteractionSource() }
                 .also { interactionSource ->
                     LaunchedEffect(interactionSource) {
@@ -170,18 +151,16 @@ fun SelectStateDistrictCityField(
                     }
                 },
         )
-        // Dropdown with search field
         if (expanded) {
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
                 modifier = Modifier
                     .background(fadeBlue11)
-                    .width(textFieldWidth*0.8f)
+                    .width(textFieldWidth * 0.8f)
                     .wrapContentHeight(),
                 scrollState = rememberScrollState()
             ) {
-
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -223,8 +202,7 @@ fun SelectStateDistrictCityField(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(8.dp)
-                            .focusRequester(focusRequester), // Set the FocusRequester
-
+                            .focusRequester(focusRequester),
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = fadeBlue1,
@@ -265,9 +243,8 @@ fun SelectStateDistrictCityField(
                                     .fillMaxWidth()
                                     .clickable {
                                         expanded = false
-                                        searchText =
-                                            option // Set the read-only field to the selected option
-                                        dropdownSearchText = "" // Reset search text after selection
+                                        searchText = option
+                                        dropdownSearchText = ""
                                         val validationResult = onSelection(option)
                                         supportingTextState = validationResult.errorComment
                                         isErrorState = !validationResult.status

@@ -1,7 +1,6 @@
-package com.example.bethedonor.ui.main_screens
+package com.example.bethedonor.presentation.main_screens
 
 import android.util.Log
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +30,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -46,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -66,8 +63,8 @@ import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.theme.teal
 import com.example.bethedonor.ui.utils.commons.showToast
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.viewmodels.EditEmailViewModel
-import com.example.bethedonor.viewmodels.ProfileViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -238,17 +235,6 @@ fun OTPDialog(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Check if not partially expanded
-                    if (sheetState.currentValue != SheetValue.PartiallyExpanded) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_otp),
-                            contentDescription = stringResource(R.string.otp_custom_image_desc),
-                            modifier = Modifier
-                                .size(80.dp)
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
                     Text(
                         text = stringResource(R.string._verification),
                         style = MaterialTheme.typography.headlineMedium,

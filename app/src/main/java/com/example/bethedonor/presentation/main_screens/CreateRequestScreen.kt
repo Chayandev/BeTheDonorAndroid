@@ -1,4 +1,4 @@
-package com.example.bethedonor.ui.main_screens
+package com.example.bethedonor.presentation.main_screens
 
 
 import androidx.compose.foundation.background
@@ -20,11 +20,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.bethedonor.R
+import com.example.bethedonor.constants.bloodGroupList2
+import com.example.bethedonor.constants.getCityList
+import com.example.bethedonor.constants.getDistrictList
+import com.example.bethedonor.constants.getPinCodeList
+import com.example.bethedonor.constants.getStateDataList
 import com.example.bethedonor.ui.components.*
 import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.utils.commons.showToast
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
-import com.example.bethedonor.utils.*
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.viewmodels.CreateRequestViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
 
@@ -34,11 +39,18 @@ fun CreateRequestScreen(
     innerPaddingValues: PaddingValues,
     onDone: () -> Unit,
     createRequestViewModel: CreateRequestViewModel,
-    sharedViewModel: SharedViewModel
+    sharedViewModel: SharedViewModel,
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val bloodGroupsList = bloodGroupList2
+
+    val selectedState by createRequestViewModel.selectedState.collectAsState()
+    val selectedDistrict by createRequestViewModel.selectedDistrict.collectAsState()
+    val selectedCity by createRequestViewModel.selectedCity.collectAsState()
+    val selectedPinCode by createRequestViewModel.selectedPinCode.collectAsState()
+    val requestInProgress by createRequestViewModel.requestInProgress.collectAsState()
+
     Surface(
         modifier = Modifier
             .fillMaxSize(),
@@ -47,7 +59,8 @@ fun CreateRequestScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(color = fadeBlue11).padding(vertical = 20.dp)
+                .background(color = fadeBlue11)
+                .padding(vertical = 20.dp)
         ) {
 
             Column(
@@ -88,7 +101,7 @@ fun CreateRequestScreen(
                 SelectStateDistrictCityField(
                     label = stringResource(id = R.string.label_state),
                     options = getStateDataList(),
-                    selectedValue = createRequestViewModel.selectedState.value,
+                    selectedValue = selectedState,
                     onSelection = {
                         createRequestViewModel.onEvent(
                             RegistrationUIEvent.StateValueChangeEvent(it)
@@ -103,8 +116,8 @@ fun CreateRequestScreen(
                 )
                 SelectStateDistrictCityField(
                     label = stringResource(id = R.string.label_district),
-                    options = getDistrictList(createRequestViewModel.selectedState.value),
-                    selectedValue = createRequestViewModel.selectedDistrict.value,
+                    options = getDistrictList(selectedState),
+                    selectedValue = selectedDistrict,
                     onSelection = {
                         createRequestViewModel.onEvent(
                             RegistrationUIEvent.DistrictValueChangeEvent(it)
@@ -120,10 +133,10 @@ fun CreateRequestScreen(
                 SelectStateDistrictCityField(
                     label = stringResource(id = R.string.label_pin),
                     options = getPinCodeList(
-                        createRequestViewModel.selectedState.value,
-                        createRequestViewModel.selectedDistrict.value,
+                        selectedState,
+                       selectedDistrict
                     ),
-                    selectedValue = createRequestViewModel.selectedPinCode.value,
+                    selectedValue = selectedPinCode,
                     onSelection = {
                         createRequestViewModel.onEvent(
                             RegistrationUIEvent.PinCodeValueChangeEvent(it)
@@ -139,11 +152,9 @@ fun CreateRequestScreen(
                 SelectStateDistrictCityField(
                     label = stringResource(id = R.string.label_city),
                     options = getCityList(
-                        createRequestViewModel.selectedState.value,
-                        createRequestViewModel.selectedDistrict.value,
-                        createRequestViewModel.selectedPinCode.value
+                        selectedState, selectedDistrict, selectedPinCode
                     ),
-                    selectedValue = createRequestViewModel.selectedCity.value,
+                    selectedValue = selectedCity,
                     onSelection = {
                         createRequestViewModel.onEvent(
                             RegistrationUIEvent.CityValueChangeEvent(it)
@@ -187,12 +198,16 @@ fun CreateRequestScreen(
                             .padding(start = 4.dp)
                     )
                 }
-                CalendarSelectField(onFieldValueChanged = {
-                    createRequestViewModel.onEvent(
-                        RegistrationUIEvent.DateValueChangeEvent(it)
-                    )
-                    createRequestViewModel.newRequestUiState.value.deadLineErrorState
-                }, modifier = Modifier.fillMaxWidth(), label = stringResource(id = R.string.label_deadline))
+                CalendarSelectField(
+                    onFieldValueChanged = {
+                        createRequestViewModel.onEvent(
+                            RegistrationUIEvent.DateValueChangeEvent(it)
+                        )
+                        createRequestViewModel.newRequestUiState.value.deadLineErrorState
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(id = R.string.label_deadline)
+                )
                 SpacerComponent(dp = 20.dp)
                 ButtonComponent(
                     onButtonClick = {
@@ -207,10 +222,10 @@ fun CreateRequestScreen(
                             })
 
                     }, buttonText = stringResource(id = R.string.send_request),
-                    isEnable = !createRequestViewModel.requestInProgress.value
+                    isEnable = !requestInProgress
                 )
 
-                if (createRequestViewModel.requestInProgress.value) {
+                if (requestInProgress) {
                     ProgressIndicatorComponent(label = stringResource(id = R.string.creating_indicator))
                 }
             }

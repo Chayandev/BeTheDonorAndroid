@@ -22,16 +22,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.bethedonor.ui.components.BottomNavBar
-import com.example.bethedonor.ui.main_screens.AllRequestScreen
-import com.example.bethedonor.ui.main_screens.CreateRequestScreen
-import com.example.bethedonor.ui.main_screens.EditEmailScreen
-import com.example.bethedonor.ui.main_screens.HistoryScreen
-import com.example.bethedonor.ui.main_screens.HomeScreen
-import com.example.bethedonor.ui.main_screens.LoginScreen
-import com.example.bethedonor.ui.main_screens.ProfileScreen
-import com.example.bethedonor.ui.main_screens.RegistrationScreen
+import com.example.bethedonor.presentation.main_screens.AllRequestScreen
+import com.example.bethedonor.presentation.main_screens.CreateRequestScreen
+import com.example.bethedonor.presentation.main_screens.EditEmailScreen
+import com.example.bethedonor.presentation.main_screens.HistoryScreen
+import com.example.bethedonor.presentation.main_screens.HomeScreen
+import com.example.bethedonor.presentation.main_screens.LoginScreen
+import com.example.bethedonor.presentation.main_screens.ProfileScreen
+import com.example.bethedonor.presentation.main_screens.RegistrationScreen
 import com.example.bethedonor.ui.theme.bgDarkBlue
 import com.example.bethedonor.ui.utils.BottomNavItem
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.viewmodels.MainViewModel
 
 @Composable
@@ -150,7 +151,7 @@ fun NavigationStack(
                     navController = navController,
                     innerPadding = innerPadding,
                     mainViewModel.allRequestViewModel,
-                    mainViewModel.sharedViewModel
+                    mainViewModel.sharedViewModel,
                 )
             }
             composable<Destination.CreateRequest>(
@@ -174,7 +175,7 @@ fun NavigationStack(
                     innerPadding,
                     onDone = { navController.popBackStack() },
                     mainViewModel.createRequestViewModel,
-                    mainViewModel.sharedViewModel
+                    mainViewModel.sharedViewModel,
                 )
             }
             composable<Destination.History> {
@@ -182,7 +183,7 @@ fun NavigationStack(
                     navController = navController,
                     mainViewModel.historyViewModel,
                     innerPadding,
-                    mainViewModel.sharedViewModel
+                    mainViewModel.sharedViewModel,
                 )
             }
             composable<Destination.Profile>(
@@ -210,7 +211,7 @@ fun NavigationStack(
                         navController.navigate(Destination.EmailEdit)
                     },
                     profileViewmodel = mainViewModel.profileViewModel,
-                   sharedViewModel = mainViewModel.sharedViewModel
+                    sharedViewModel = mainViewModel.sharedViewModel,
                 )
             }
             composable<Destination.EmailEdit>(
@@ -230,7 +231,7 @@ fun NavigationStack(
                 EditEmailScreen(
                     editEmailViewModel = mainViewModel.editEmailViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    sharedViewModel = mainViewModel.sharedViewModel
+                    sharedViewModel = mainViewModel.sharedViewModel,
                 )
             }
             composable<Destination.Registration>(

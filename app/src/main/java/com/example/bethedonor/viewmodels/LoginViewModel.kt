@@ -14,8 +14,7 @@ import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.domain.usecase.LogInUserUseCase
 import com.example.bethedonor.ui.utils.uievent.LoginUIEvent
 import com.example.bethedonor.ui.utils.uistate.LoginUiState
-import com.example.bethedonor.ui.utils.validationRules.Validator
-import kotlinx.coroutines.Job
+import com.example.bethedonor.utils.Validator
 import kotlinx.coroutines.launch
 
 class LoginViewModel(application: Application) : AndroidViewModel(application){

@@ -1,4 +1,4 @@
-package com.example.bethedonor.ui.main_screens
+package com.example.bethedonor.presentation.main_screens
 
 import PhoneNumberEditText
 import android.util.Log
@@ -34,7 +34,6 @@ import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Transgender
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +47,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -71,7 +69,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bethedonor.R
-import com.example.bethedonor.data.dataModels.ProfileResponse
 import com.example.bethedonor.data.dataModels.UserProfile
 import com.example.bethedonor.ui.components.AvailabilityCheckerField
 import com.example.bethedonor.ui.components.ButtonComponent
@@ -89,16 +86,17 @@ import com.example.bethedonor.ui.theme.darkGray
 import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.utils.commons.showToast
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
-import com.example.bethedonor.ui.utils.validationRules.ValidationResult
+import com.example.bethedonor.utils.ValidationResult
 import com.example.bethedonor.utils.formatDate
-import com.example.bethedonor.utils.genderList
-import com.example.bethedonor.utils.getCityList
+import com.example.bethedonor.constants.genderList
+import com.example.bethedonor.constants.getCityList
 import com.example.bethedonor.utils.getCountryCode
-import com.example.bethedonor.utils.getDistrictList
+import com.example.bethedonor.constants.getDistrictList
 import com.example.bethedonor.utils.getInitials
 import com.example.bethedonor.utils.getPhoneNoWithoutCountryCode
-import com.example.bethedonor.utils.getPinCodeList
-import com.example.bethedonor.utils.getStateDataList
+import com.example.bethedonor.constants.getPinCodeList
+import com.example.bethedonor.constants.getStateDataList
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.viewmodels.ProfileViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.launch
@@ -111,7 +109,7 @@ fun ProfileScreen(
     profileViewmodel: ProfileViewModel,
     sharedViewModel: SharedViewModel,
     onLogOutNavigate: () -> Unit,
-    onEmailEditNavigate: () -> Unit
+    onEmailEditNavigate: () -> Unit,
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -127,6 +125,12 @@ fun ProfileScreen(
     val retryFlag by profileViewmodel.retryFlag.collectAsState()
     val isRefreshing by profileViewmodel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
+
+    val selectedState by profileViewmodel.selectedState.collectAsState()
+    val selectedDistrict by profileViewmodel.selectedDistrict.collectAsState()
+    val selectedCity by profileViewmodel.selectedCity.collectAsState()
+    val selectedPinCode by profileViewmodel.selectedPinCode.collectAsState()
+    val availableToDonate by profileViewmodel.availableToDonate.collectAsState()
     //**********
 
     val hasFetchedProfile = profileViewmodel.getFetchedProfile()
@@ -431,11 +435,13 @@ fun ProfileScreen(
             mutableStateOf(false)
         }
         if (showBottomSheetForEditProfile) {
-            profileViewmodel.selectedState.value = profileData.value?.state
-            profileViewmodel.selectedDistrict.value = profileData.value?.district
-            profileViewmodel.selectedCity.value = profileData.value?.city
-            profileViewmodel.selectedPinCode.value = profileData.value?.pin
-            profileViewmodel.setAvailableToDonate(profileData.value?.available ?: false)
+            profileViewmodel.setAllProfileDetails(
+                profileData.value?.state?:"",
+                profileData.value?.district?:"",
+                profileData.value?.city?:"",
+                profileData.value?.pin?:"",
+                profileData.value?.available?:false
+            )
 
             ModalBottomSheet(
                 onDismissRequest = {
@@ -557,7 +563,7 @@ fun ProfileScreen(
                             SelectStateDistrictCityField(
                                 label = stringResource(id = R.string.label_state),
                                 options = getStateDataList(),
-                                selectedValue = profileViewmodel.selectedState.value,
+                                selectedValue =selectedState ,
                                 onSelection = {
                                     isFieldChanged.value = true
                                     profileViewmodel.onEvent(
@@ -575,8 +581,8 @@ fun ProfileScreen(
                             )
                             SelectStateDistrictCityField(
                                 label = stringResource(id = R.string.label_district),
-                                options = getDistrictList(selectedState = profileViewmodel.selectedState.value),
-                                selectedValue = profileViewmodel.selectedDistrict.value,
+                                options = getDistrictList(selectedState),
+                                selectedValue = selectedDistrict,
                                 onSelection = {
                                     isFieldChanged.value = true
                                     profileViewmodel.onEvent(
@@ -596,10 +602,10 @@ fun ProfileScreen(
                             SelectStateDistrictCityField(
                                 label = stringResource(id = R.string.label_pin),
                                 options = getPinCodeList(
-                                    selectedState = profileViewmodel.selectedState.value,
-                                    selectedDistrict = profileViewmodel.selectedDistrict.value,
+                                    selectedState = selectedState,
+                                    selectedDistrict =selectedDistrict,
                                 ),
-                                selectedValue = profileViewmodel.selectedPinCode.value,
+                                selectedValue = selectedPinCode,
                                 onSelection = {
                                     isFieldChanged.value = true
                                     profileViewmodel.onEvent(
@@ -619,11 +625,11 @@ fun ProfileScreen(
                             SelectStateDistrictCityField(
                                 label = stringResource(id = R.string.label_city),
                                 options = getCityList(
-                                    selectedState = profileViewmodel.selectedState.value,
-                                    selectedDistrict = profileViewmodel.selectedDistrict.value,
-                                    selectedPinCode = profileViewmodel.selectedPinCode.value
+                                    selectedState = selectedState,
+                                    selectedDistrict = selectedDistrict,
+                                    selectedPinCode = selectedPinCode
                                 ),
-                                selectedValue = profileViewmodel.selectedCity.value,
+                                selectedValue =selectedCity,
                                 onSelection = {
                                     isFieldChanged.value = true
                                     profileViewmodel.onEvent(
@@ -642,7 +648,7 @@ fun ProfileScreen(
                             )
 
                             AvailabilityCheckerField(
-                                value = profileViewmodel.availableToDonate.value,
+                                value = availableToDonate,
                                 onCheckerChange = {
                                     profileViewmodel.onEvent(
                                         RegistrationUIEvent.AvailabilityCheckerValueChangeEvent(it)
@@ -833,13 +839,13 @@ fun TextComponent(value: Int?, label: String) {
 fun ProfileScreenPreview() {
     ProfileScreen(
         innerPadding = PaddingValues(0.dp),
+        profileViewmodel = viewModel(),
+        sharedViewModel = viewModel(),
         onLogOutNavigate = {
             //
         },
         onEmailEditNavigate = {
             //
         },
-        profileViewmodel = viewModel(),
-        sharedViewModel = viewModel()
     )
 }

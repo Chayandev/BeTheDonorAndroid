@@ -2,7 +2,6 @@ package com.example.bethedonor.viewmodels
 
 import android.app.Application
 import android.util.Log
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
@@ -13,6 +12,7 @@ import com.example.bethedonor.data.dataModels.UserProfile
 import com.example.bethedonor.data.preferences.PreferencesManager
 import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.domain.usecase.*
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.*
@@ -23,7 +23,13 @@ data class BloodRequestWithUser(
     val user: UserProfile
 )
 
-class AllRequestViewModel(application: Application) : AndroidViewModel(application) {
+class AllRequestViewModel(
+    application: Application,
+    private val networkMonitor: NetworkConnectivityMonitor
+) : AndroidViewModel(application) {
+    init {
+        observeNetworkChanges()
+    }
 
     // ***** Access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
@@ -55,9 +61,6 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
     private val _switchChecked = MutableStateFlow(false)
     val switchChecked: StateFlow<Boolean> = _switchChecked
 
-    private val _isSheetVisible = MutableStateFlow(false)
-    val isSheetVisible: StateFlow<Boolean> = _isSheetVisible
-
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()
 
@@ -72,6 +75,9 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _filterPin = MutableStateFlow("")
     val filterPin: StateFlow<String> = _filterPin
+
+    private val _isNetWorkConnected = MutableStateFlow(true)
+    val isNetworkConnected: StateFlow<Boolean> = _isNetWorkConnected
 
     // ***** Repositories and UseCases ***** //
     private val apiService = RetrofitClient.instance
@@ -92,10 +98,6 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
     fun setSwitchChecked(value: Boolean) {
         _switchChecked.value = value
         filterByOpenCloseValue(value)
-    }
-
-    fun setRetryFlag(value: Boolean) {
-        _retryFlag.value = value
     }
 
     fun setRefresherStatusTrue() {
@@ -129,7 +131,31 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
         _searchText.value = ""
     }
 
+    private fun observeNetworkChanges() {
+        // Observe the network connectivity changes
+        viewModelScope.launch {
+            try {
+                networkMonitor.isNetworkAvailable.collect { isConnected ->
+                    _isNetWorkConnected.value = isConnected
+                    if (isConnected) {
+                        _isNetWorkConnected.value = true
+
+                        if(!hasFetchedResult.value){
+                            getAllBloodRequest()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("Network Monitor", "Error observing network changes", e)
+            }
+        }
+    }
+
     fun getAllBloodRequest() {
+        if (!networkMonitor.isNetworkAvailable.value) {
+            _isNetWorkConnected.value = false
+            return@getAllBloodRequest
+        }
         isRequestFetching.value = true
         resetFilterUi()
         setSwitchChecked(false)
@@ -155,21 +181,29 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
                     val bloodRequestWithUsers = bloodRequestWithUsersDeferred.awaitAll().reversed()
                     _allBloodRequestResponse.value = Result.success(bloodRequestWithUsers)
                     _allBloodRequestResponseList.value = Result.success(bloodRequestWithUsers)
+                    _retryFlag.value = false
                 } else {
+                    _retryFlag.value = true
                     _allBloodRequestResponse.value = Result.failure(Exception(response.message))
                     _allBloodRequestResponseList.value = Result.failure(Exception(response.message))
                 }
             } catch (e: Exception) {
+                _retryFlag.value = true
                 _allBloodRequestResponse.value = Result.failure(e)
                 _allBloodRequestResponseList.value = Result.failure(e)
             } finally {
                 isRequestFetching.value = false
                 _isRefreshing.value = false
+                setFetchedResult(true)
             }
         }
     }
 
     fun fetchCurrentUserDetails() {
+        if (!networkMonitor.isNetworkAvailable.value) {
+            _isNetWorkConnected.value = false
+            return@fetchCurrentUserDetails
+        }
         viewModelScope.launch {
             try {
                 val response = getUserProfileUserUseCase.execute(getAuthToken().toString())
@@ -183,6 +217,10 @@ class AllRequestViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun acceptDonation(requestId: String, onResult: (Result<AcceptDonationResponse>) -> Unit) {
+        if (!networkMonitor.isNetworkAvailable.value) {
+            _isNetWorkConnected.value = false
+            return@acceptDonation
+        }
         requestingToAccept.value = mapOf(requestId to true)
         viewModelScope.launch {
             try {

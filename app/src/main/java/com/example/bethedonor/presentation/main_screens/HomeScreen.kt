@@ -1,4 +1,4 @@
-package com.example.bethedonor.ui.main_screens
+package com.example.bethedonor.presentation.main_screens
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing

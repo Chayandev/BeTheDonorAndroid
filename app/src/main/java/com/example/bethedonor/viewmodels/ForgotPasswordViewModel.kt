@@ -4,7 +4,6 @@ import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
 import com.example.bethedonor.data.dataModels.BackendResponse
@@ -13,7 +12,7 @@ import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.domain.usecase.ForgetPasswordUseCase
 import com.example.bethedonor.ui.utils.uievent.ForgotPasswordUiEvent
 import com.example.bethedonor.ui.utils.uistate.ForgetPasswordUiState
-import com.example.bethedonor.ui.utils.validationRules.Validator
+import com.example.bethedonor.utils.Validator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

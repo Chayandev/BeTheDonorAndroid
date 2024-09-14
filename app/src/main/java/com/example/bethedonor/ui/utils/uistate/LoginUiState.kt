@@ -1,5 +1,5 @@
 package com.example.bethedonor.ui.utils.uistate
-import com.example.bethedonor.ui.utils.validationRules.ValidationResult
+import com.example.bethedonor.utils.ValidationResult
 
 data class LoginUiState(
     val emailId: String = "",

@@ -1,4 +1,4 @@
-package com.example.bethedonor.ui.main_screens
+package com.example.bethedonor.presentation.main_screens
 
 import android.content.Context
 import android.content.Intent
@@ -57,6 +57,7 @@ import com.example.bethedonor.ui.theme.bloodRed2
 import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.theme.lightGray
 import com.example.bethedonor.ui.utils.commons.showToast
+import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.utils.dateDiffInDays
 import com.example.bethedonor.utils.formatDate
 import com.example.bethedonor.viewmodels.HistoryViewModel
