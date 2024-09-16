@@ -275,7 +275,7 @@ fun RequestHistoryCard(
                                 )
                                 IconTextComponent(
                                     icon = rememberVectorPainter(image = Icons.Outlined.AccessTime),
-                                    text = "$createdAt Days"
+                                    text = "$createdAt Days ago"
                                 )
                             }
                             Column(
