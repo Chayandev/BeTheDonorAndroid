@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class EditEmailViewModel(application: Application, networkMonitor: NetworkConnectivityMonitor) : AndroidViewModel(application) {
+class EditEmailViewModel(application: Application) : AndroidViewModel(application) {
 
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())

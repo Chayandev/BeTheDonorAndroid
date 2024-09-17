@@ -57,7 +57,6 @@ import com.example.bethedonor.ui.theme.bloodRed2
 import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.theme.lightGray
 import com.example.bethedonor.ui.utils.commons.showToast
-import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.utils.dateDiffInDays
 import com.example.bethedonor.utils.formatDate
 import com.example.bethedonor.viewmodels.HistoryViewModel
@@ -182,7 +181,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
             }
 
             retryFlag -> {
-                Retry(message = stringResource(id = R.string.retry), onRetry = {
+                Retry(message = stringResource(id = R.string.error), onRetry = {
                     retryFlag = false
                     networkCall(historyViewModel = historyViewModel, id = 1)
                 })
@@ -214,8 +213,8 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                                 count = requestHistory.bloodRequest.donors.size,
                                 bloodGroup = requestHistory.bloodRequest.bloodGroup,
                                 bloodUnit = requestHistory.bloodRequest.bloodUnit,
-                                createdAt = formatDate(requestHistory.bloodRequest.createdAt),
-                                deadline = dateDiffInDays(requestHistory.bloodRequest.createdAt).toString(),
+                                createdAt = dateDiffInDays(requestHistory.bloodRequest.createdAt).toString(),
+                                deadline = formatDate(requestHistory.bloodRequest.deadline),
                                 isClosed = requestHistory.bloodRequest.isClosed,
                                 onAcceptorIconClick = {
                                     showBottomSheet = true
@@ -234,7 +233,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                                         onResponse = { message ->
                                             showToast(
                                                 context = context,
-                                                message = message.getOrNull().toString()
+                                                message = message.getOrNull()?:context.getString(R.string.error)
                                             )
                                         }
                                     )
@@ -271,7 +270,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
             Box(contentAlignment = Alignment.Center) {
                 donorListResponse?.let { response ->
                     if (response.isFailure || response.getOrNull()?.statusCode != stringResource(id = R.string.status_code_success)) {
-                        showToast(context = context, message = stringResource(id = R.string.retry))
+                        showToast(context = context, message = stringResource(id = R.string.error))
                         return@let
                     }
                     val donors = response.getOrNull()?.donors

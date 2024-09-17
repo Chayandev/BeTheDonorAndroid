@@ -96,7 +96,6 @@ import com.example.bethedonor.utils.getInitials
 import com.example.bethedonor.utils.getPhoneNoWithoutCountryCode
 import com.example.bethedonor.constants.getPinCodeList
 import com.example.bethedonor.constants.getStateDataList
-import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.viewmodels.ProfileViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.launch
@@ -702,7 +701,7 @@ fun ProfileScreen(
             ProgressIndicatorComponent(label = stringResource(id = R.string.updating_profile_indicator))
         }
         if (retryFlag) {
-            Retry(message = stringResource(id = R.string.retry), onRetry = {
+            Retry(message = stringResource(id = R.string.error), onRetry = {
                 profileViewmodel.setRetryFlag(false)
                 networkCall(
                     profileViewmodel,

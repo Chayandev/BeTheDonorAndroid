@@ -60,7 +60,6 @@ import com.example.bethedonor.constants.getDistrictList
 import com.example.bethedonor.constants.getPinCodeList
 import com.example.bethedonor.constants.getStateDataList
 import com.example.bethedonor.presentation.temporay_screen.NetworkFailureScreen
-import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.viewmodels.AllRequestViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -197,7 +196,7 @@ fun AllRequestScreen(
                 }
             }
             if (retryFlag) {
-                Retry(message = stringResource(id = R.string.retry), onRetry = {
+                Retry(message = stringResource(id = R.string.error), onRetry = {
                     networkCall(
                         allRequestViewModel = allRequestViewModel,
                     )

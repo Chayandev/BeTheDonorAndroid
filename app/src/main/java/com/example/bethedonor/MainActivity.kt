@@ -29,11 +29,11 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     // Lazily initialize NetworkConnectivityMonitor
-    private val networkMonitor by lazy { NetworkConnectivityMonitor(this@MainActivity) }
+  //  private val networkMonitor by lazy { NetworkConnectivityMonitor(this@MainActivity) }
 
     // Initialize MainViewModel with a factory
     private val mainViewModel: MainViewModel by viewModels {
-        MainViewModelFactory(application, networkMonitor)
+        MainViewModelFactory(application)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,9 +85,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        // Unregister the network callback to avoid memory leaks
-        networkMonitor.unregisterCallback()
-    }
 }

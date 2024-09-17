@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ProfileViewModel(application: Application, private  val networkMonitor: NetworkConnectivityMonitor) : AndroidViewModel(application) {
+class ProfileViewModel(application: Application, ) : AndroidViewModel(application) {
 
 
     // ***** access the datastore ***** //

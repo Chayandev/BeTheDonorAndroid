@@ -1,6 +1,7 @@
 package com.example.bethedonor.ui.components
 
 import android.app.Application
+import android.widget.Toast
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.TweenSpec
@@ -342,14 +343,17 @@ fun AllRequestCard(
                             viewModel.acceptDonation(
                                 requestId = id
                             ) { response ->
-                                if (response.isSuccess) {
-                                    if (response.getOrNull()?.bloodRequest != null) {
-                                        isAcceptor.value = true
-                                        donorCount.intValue += 1
-                                    }
+                                if (response.getOrNull()?.statusCode != null) {
+                                    isAcceptor.value = true
+                                    donorCount.intValue += 1
+                                    onDonationClickResponse(
+                                        response.getOrNull()?.message ?: "Error"
+                                    )
+                                    return@acceptDonation
                                 }
                                 onDonationClickResponse(
-                                    response.getOrNull()?.message ?: "Error"
+                                    response.exceptionOrNull()?.message
+                                        ?: "Something went wrong"
                                 )
                             }
                         },

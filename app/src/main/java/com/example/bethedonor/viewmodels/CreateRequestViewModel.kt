@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class CreateRequestViewModel(application: Application, networkMonitor: NetworkConnectivityMonitor) : AndroidViewModel(application) {
+class CreateRequestViewModel(application: Application) : AndroidViewModel(application) {
 
     //***** Initialize Preferences Manager for accessing DataStore *****//
     private val preferencesManager = PreferencesManager(getApplication())

@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
@@ -100,7 +101,7 @@ fun RequestHistoryCard(
     var isClosedValue by remember { mutableStateOf(isClosed) }
     val togglingToChangeStatus by historyViewModel.isToggleStatusRequestFetching.collectAsState()
     val isToggling = togglingToChangeStatus[id] ?: false
-
+    val context = LocalContext.current
     if (isDialogVisible) {
         WarningDialog(
             icon = Icons.Filled.DeleteForever,
@@ -270,12 +271,12 @@ fun RequestHistoryCard(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 IconTextComponent(
-                                    icon = rememberVectorPainter(image = Icons.Outlined.Timer),
-                                    text = deadline
-                                )
-                                IconTextComponent(
                                     icon = rememberVectorPainter(image = Icons.Outlined.AccessTime),
                                     text = "$createdAt Days ago"
+                                )
+                                IconTextComponent(
+                                    icon = rememberVectorPainter(image = Icons.Outlined.Timer),
+                                    text = deadline
                                 )
                             }
                             Column(
@@ -340,8 +341,10 @@ fun RequestHistoryCard(
                                     Log.d("response", "$response")
                                     if (response.statusCode == "200") {
                                         isClosedValue = !isClosedValue
+                                        response.message?.let { onToggleStatus(it) }
+                                        return@toggleRequestStatus
                                     }
-                                    response.message?.let { onToggleStatus(it) }
+                                    onToggleStatus(context.getString(R.string.error))
                                 })
                         },
                         shape = RoundedCornerShape(8.dp),

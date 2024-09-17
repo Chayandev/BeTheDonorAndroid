@@ -25,11 +25,10 @@ data class BloodRequestWithUser(
 
 class AllRequestViewModel(
     application: Application,
-    private val networkMonitor: NetworkConnectivityMonitor
 ) : AndroidViewModel(application) {
-    init {
-        observeNetworkChanges()
-    }
+//    init {
+//        observeNetworkChanges()
+//    }
 
     // ***** Access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
@@ -131,31 +130,27 @@ class AllRequestViewModel(
         _searchText.value = ""
     }
 
-    private fun observeNetworkChanges() {
-        // Observe the network connectivity changes
-        viewModelScope.launch {
-            try {
-                networkMonitor.isNetworkAvailable.collect { isConnected ->
-                    _isNetWorkConnected.value = isConnected
-                    if (isConnected) {
-                        _isNetWorkConnected.value = true
-
-                        if(!hasFetchedResult.value){
-                            getAllBloodRequest()
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("Network Monitor", "Error observing network changes", e)
-            }
-        }
-    }
+//    private fun observeNetworkChanges() {
+//        // Observe the network connectivity changes
+//        viewModelScope.launch {
+//            try {
+//                networkMonitor.isNetworkAvailable.collect { isConnected ->
+//                    _isNetWorkConnected.value = isConnected
+//                    if (isConnected) {
+//                        _isNetWorkConnected.value = true
+//
+//                        if(!hasFetchedResult.value){
+//                            getAllBloodRequest()
+//                        }
+//                    }
+//                }
+//            } catch (e: Exception) {
+//                Log.e("Network Monitor", "Error observing network changes", e)
+//            }
+//        }
+//    }
 
     fun getAllBloodRequest() {
-        if (!networkMonitor.isNetworkAvailable.value) {
-            _isNetWorkConnected.value = false
-            return@getAllBloodRequest
-        }
         isRequestFetching.value = true
         resetFilterUi()
         setSwitchChecked(false)
@@ -200,10 +195,6 @@ class AllRequestViewModel(
     }
 
     fun fetchCurrentUserDetails() {
-        if (!networkMonitor.isNetworkAvailable.value) {
-            _isNetWorkConnected.value = false
-            return@fetchCurrentUserDetails
-        }
         viewModelScope.launch {
             try {
                 val response = getUserProfileUserUseCase.execute(getAuthToken().toString())
@@ -217,10 +208,6 @@ class AllRequestViewModel(
     }
 
     fun acceptDonation(requestId: String, onResult: (Result<AcceptDonationResponse>) -> Unit) {
-        if (!networkMonitor.isNetworkAvailable.value) {
-            _isNetWorkConnected.value = false
-            return@acceptDonation
-        }
         requestingToAccept.value = mapOf(requestId to true)
         viewModelScope.launch {
             try {

@@ -28,7 +28,7 @@
     <string name="label_confirm_password">Confirm Password</string>
     <string name="label_blood_group">Blood Group</string>
     <string name="label_DOB">DOB</string>
-    <string name="retry">Something Went Wrong</string>
+    <string name="error">Something Went Wrong</string>
     <string name="message">Please fill all the required fields!</string>
     <string name="send_request">Send Request</string>
     <string name="apply">Apply</string>

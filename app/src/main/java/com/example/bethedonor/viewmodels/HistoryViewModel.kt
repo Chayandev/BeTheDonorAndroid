@@ -23,7 +23,7 @@ data class RequestHistory(
     val bloodRequest: BloodRequest
 )
 
-class HistoryViewModel(application: Application, networkMonitor: NetworkConnectivityMonitor) : AndroidViewModel(application){
+class HistoryViewModel(application: Application) : AndroidViewModel(application){
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
 
