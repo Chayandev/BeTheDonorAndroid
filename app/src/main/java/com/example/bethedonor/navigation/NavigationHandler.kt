@@ -206,6 +206,7 @@ fun NavigationStack(
                         navController.navigate(Destination.Login) {
                             popUpTo(0)
                         }
+                        mainViewModel.resettingViewModelState()
                     },
                     onEmailEditNavigate = {
                         navController.navigate(Destination.EmailEdit)

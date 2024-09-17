@@ -16,6 +16,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val createRequestViewModel: CreateRequestViewModel by lazy { CreateRequestViewModel(application) }
     val historyViewModel: HistoryViewModel by lazy { HistoryViewModel(application) }
     val editEmailViewModel: EditEmailViewModel by lazy { EditEmailViewModel(application) }
+
+    fun resettingViewModelState(){
+        profileViewModel.resetUiStates()
+        historyViewModel.resetUiStates()
+        allRequestViewModel.resetUiState()
+    }
+
 }
 
 // Factory for creating MainViewModel with Application context

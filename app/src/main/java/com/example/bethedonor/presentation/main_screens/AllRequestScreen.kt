@@ -22,7 +22,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -42,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.privacysandbox.tools.core.model.Types.unit
 import com.example.bethedonor.R
 import com.example.bethedonor.domain.model.RequestCardDetails
 import com.example.bethedonor.ui.components.AllRequestCard
@@ -60,12 +60,9 @@ import com.example.bethedonor.constants.getDistrictList
 import com.example.bethedonor.constants.getPinCodeList
 import com.example.bethedonor.constants.getStateDataList
 import com.example.bethedonor.presentation.temporay_screen.NetworkFailureScreen
+import com.example.bethedonor.presentation.temporay_screen.NoResultFoundScreen
 import com.example.bethedonor.viewmodels.AllRequestViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,48 +75,35 @@ fun AllRequestScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val allBloodRequestResponseList by allRequestViewModel.allBloodRequestResponseList.collectAsState(
-        null
-    )
-    val currentUserDetails by allRequestViewModel.currentUserDetails.collectAsState(null)
-
-    val isLoading by allRequestViewModel.isRequestFetching.collectAsState()
-    val searchText by allRequestViewModel.searchText.collectAsState()
-    val filterState by allRequestViewModel.filterState.collectAsState()
-    val filterDistrict by allRequestViewModel.filterDistrict.collectAsState()
-    val filterCity by allRequestViewModel.filterCity.collectAsState()
-    val filterPin by allRequestViewModel.filterPin.collectAsState()
-    val retryFlag by allRequestViewModel.retryFlag.collectAsState()
-    val switchStatus by allRequestViewModel.switchChecked.collectAsState()
-    val isNetworkConnected by allRequestViewModel.isNetworkConnected.collectAsState()
-    val isRefreshing by allRequestViewModel.isRefreshing.collectAsState()
+    val uiState by allRequestViewModel.uiState.collectAsState()
+    val lazyListState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
 
-    val lazyListState = rememberLazyListState()
-    //**********
-    val hasFetchedRequests by allRequestViewModel.hasFetchedResult.collectAsState()
-    LaunchedEffect(isNetworkConnected) {
-        if (isNetworkConnected && (retryFlag || !hasFetchedRequests)) {
+    LaunchedEffect(uiState.isNetworkConnected) {
+        if (uiState.isNetworkConnected && (uiState.retryFlag || !uiState.hasFetchedResult)) {
             networkCall(
                 allRequestViewModel = allRequestViewModel,
             )
         }
     }
-//    // Use LaunchedEffect to reset the scroll position when data changes
-//    LaunchedEffect(isRefreshing) {
-//        // Reset the scroll state to the top when the list changes
-//        lazyListState.scrollToItem(0)
-//    }
+    LaunchedEffect(uiState.isRefreshing) {
+        if (uiState.isRefreshing) {
+            pullToRefreshState.startRefresh()
+        } else {
+            pullToRefreshState.endRefresh()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBarComponent(
-                searchText,
-                allRequestViewModel,
-                filterState,
-                filterDistrict,
-                filterCity,
-                filterPin,
-                switchStatus = switchStatus
+                searchText = uiState.searchText,
+                allRequestViewModel = allRequestViewModel,
+                filterState = uiState.filterState,
+                filterDistrict = uiState.filterDistrict,
+                filterCity = uiState.filterCity,
+                filterPin = uiState.filterPin,
+                switchStatus = uiState.switchChecked
             )
         },
         modifier = Modifier.nestedScroll(pullToRefreshState.nestedScrollConnection),
@@ -129,11 +113,21 @@ fun AllRequestScreen(
             contentAlignment = Alignment.TopCenter
         ) {
             Surface(color = bgDarkBlue) {
-                allBloodRequestResponseList?.let { result ->
+                uiState.allBloodRequestResponseList?.let { result ->
                     val bloodRequestsWithUsers = if (result.isSuccess) {
                         result.getOrNull()
                     } else {
-                        listOf()
+                        null
+                    }
+                    if (bloodRequestsWithUsers?.isEmpty() == true) {
+                        NoResultFoundScreen()
+                        return@Surface
+                    }
+                    if(uiState.isFiltered){
+                        scope.launch {
+                            lazyListState.scrollToItem(0)
+                            allRequestViewModel.setIsFiltered(false)
+                        }
                     }
                     bloodRequestsWithUsers?.let {
                         LazyColumn(state = lazyListState) {
@@ -148,7 +142,7 @@ fun AllRequestScreen(
                                 val iSUserCreation = remember {
                                     mutableStateOf(false)
                                 }
-                                currentUserDetails?.let { userResult ->
+                                uiState.currentUserDetails?.let { userResult ->
                                     if (userResult.isSuccess) {
                                         userResult.getOrNull()?.let { userResponse ->
                                             isDonor.value =
@@ -192,29 +186,24 @@ fun AllRequestScreen(
                                 Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 8.dp))
                             }
                         }
-                    } ?: EmptyStateComponent()
+                    } ?: NoResultFoundScreen()
                 }
             }
-            if (retryFlag) {
+            if (uiState.retryFlag) {
                 Retry(message = stringResource(id = R.string.error), onRetry = {
                     networkCall(
                         allRequestViewModel = allRequestViewModel,
                     )
                 })
             }
-            if (isRefreshing)
+            if (uiState.isRefreshing) {
                 PullToRefreshContainer(
                     state = pullToRefreshState,
                     modifier = Modifier.padding(innerPadding.calculateBottomPadding() + 20.dp)
                 )
-        }
-        LaunchedEffect(isRefreshing) {
-            if (isRefreshing) {
-                pullToRefreshState.startRefresh()
-            } else {
-                pullToRefreshState.endRefresh()
             }
         }
+
         if (pullToRefreshState.isRefreshing) {
             LaunchedEffect(true) {
                 allRequestViewModel.setRefresherStatusTrue()
@@ -224,21 +213,16 @@ fun AllRequestScreen(
             }
         }
     }
-    if (isLoading && !isRefreshing) {
+    if (uiState.isRequestFetching && !uiState.isRefreshing) {
         LoadingScreen()
     }
-    if(!isNetworkConnected){
-         NetworkFailureScreen(onRetry = {
-             networkCall(
-                 allRequestViewModel = allRequestViewModel,
-             )
-         })
+    if (!uiState.isNetworkConnected) {
+        NetworkFailureScreen(onRetry = {
+            networkCall(
+                allRequestViewModel = allRequestViewModel,
+            )
+        })
     }
-}
-
-@Composable
-fun EmptyStateComponent() {
-    Text(text = "Empty", color = Color.White)
 }
 
 @Composable
@@ -287,7 +271,8 @@ fun TopAppBarComponent(
                         onCheckedChange = {
                             allRequestViewModel.setSwitchChecked(it)
                         },
-                        enabled = !allRequestViewModel.isRequestFetching.collectAsState().value && !allRequestViewModel.isRefreshing.collectAsState().value,
+                        enabled = (!allRequestViewModel.uiState.collectAsState().value.isRequestFetching
+                                && !allRequestViewModel.uiState.collectAsState().value.isRefreshing),
                         colors = SwitchDefaults.colors(
                             checkedBorderColor = Color.Transparent,
                             checkedThumbColor = Color.White,
@@ -352,23 +337,7 @@ fun TopAppBarComponent(
 }
 
 fun networkCall(allRequestViewModel: AllRequestViewModel) {
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            // Launch both network calls in parallel using async
-            val getAllBloodRequestDeferred = async {
-                allRequestViewModel.getAllBloodRequest()
-            }
-            val fetchCurrentUserDetailsDeferred = async {
-                allRequestViewModel.fetchCurrentUserDetails()
-            }
-            // Await the results of both calls
-            awaitAll(getAllBloodRequestDeferred, fetchCurrentUserDetailsDeferred)
-            // Handle any additional logic if needed after both calls are complete
-        } catch (e: Exception) {
-            // Handle any exceptions that occur during the network calls
-            e.printStackTrace()
-        }
-    }
+    allRequestViewModel.parallelNetworkCall()
 }
 
 @Preview
