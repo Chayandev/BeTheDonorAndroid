@@ -69,12 +69,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    private fun clearViewModelsOnLogout() {
-        // Restart the activity to reinitialize all ViewModels
-        val intent = Intent(this, MainActivity::class.java)
-        finish()
-        startActivity(intent)
-    }
+//    private fun clearViewModelsOnLogout() {
+//        // Restart the activity to reinitialize all ViewModels
+//        val intent = Intent(this, MainActivity::class.java)
+//        finish()
+//        startActivity(intent)
+//    }
     // Function to load area data asynchronously
     private fun loadAreaData() {
         lifecycleScope.launch {

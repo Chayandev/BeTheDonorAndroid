@@ -43,10 +43,11 @@ import com.example.bethedonor.ui.theme.fadeBlue2
 
 
 @Composable
-fun AcceptorDetailsCard(donnerDetails: Donor,onCall:(String)->Unit) {
-
+fun AcceptorDetailsCard(donnerDetails: Donor,onCall:(String)->Unit,onClick: ()->Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(8.dp)
+            .clickable { onClick() }
+        ,
         shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 0.dp
@@ -166,6 +167,7 @@ fun AcceptorDetailsCardPreview() {
             pin = "700105",
             bloodGroup = "B+",
         ),
-        onCall = {}
+        onCall = {},
+        onClick = {}
     )
 }

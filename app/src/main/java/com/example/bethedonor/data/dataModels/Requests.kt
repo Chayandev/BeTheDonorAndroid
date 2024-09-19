@@ -1,5 +1,6 @@
 package com.example.bethedonor.data.dataModels
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import java.util.Date
 
@@ -102,6 +103,7 @@ data class VerifyOTPRequest(
     val otp: String,
     val otpId: String
 )
+
 data class Donor(
     val name: String,
     val email: String,
@@ -112,4 +114,5 @@ data class Donor(
     val phoneNumber: String,
     val bloodGroup: String
 )
+
 

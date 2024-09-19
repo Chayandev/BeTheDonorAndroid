@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.bethedonor.R
+import com.example.bethedonor.data.dataModels.Donor
 import com.example.bethedonor.ui.components.AcceptorDetailsCard
 import com.example.bethedonor.ui.components.ProgressIndicatorComponent
 import com.example.bethedonor.ui.components.RequestHistoryCard
@@ -79,6 +80,7 @@ fun HistoryScreen(
     historyViewModel: HistoryViewModel,
     innerPadding: PaddingValues,
     sharedViewModel: SharedViewModel,
+    onDonorScreenNavigate: (Donor) -> Unit
 ) {
     val context = LocalContext.current
     val tabItem = listOf(
@@ -147,7 +149,9 @@ fun HistoryScreen(
                         when (page) {
                             0 -> RequestScreen(
                                 historyViewModel = historyViewModel,
-                                innerPadding
+                                innerPadding, onDonorScreenNavigate = {donor->
+                                    onDonorScreenNavigate(donor)
+                                }
                             )
                             //1 -> DonationScreen() // Create DonationScreen similar to RequestScreen
                         }
@@ -165,7 +169,7 @@ fun HistoryScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValues) {
+fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValues,onDonorScreenNavigate: (Donor) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
@@ -317,6 +321,9 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                             items(items = donors, key = { it.phoneNumber }) { donor ->
                                 AcceptorDetailsCard(donnerDetails = donor, onCall = { phoneNo ->
                                     moveToCallActivity(context, phoneNo)
+                                }, onClick = {
+                                    showBottomSheet=false
+                                    onDonorScreenNavigate(donor)
                                 })
                             }
                         }
