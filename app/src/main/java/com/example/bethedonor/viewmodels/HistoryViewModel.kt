@@ -23,11 +23,11 @@ data class RequestHistory(
     val bloodRequest: BloodRequest
 )
 
-class HistoryViewModel(application: Application) : AndroidViewModel(application){
+class HistoryViewModel(application: Application) : AndroidViewModel(application) {
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
 
-    private fun getAuthToken():String?{
+    private fun getAuthToken(): String? {
         return preferencesManager.jwtToken
     }
     //*************************
@@ -115,17 +115,12 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
 
     fun deleteRequest(requestId: String, onResponse: (Result<String>) -> Unit) {
         viewModelScope.launch {
-         isDeletingRequest.value=true
+            isDeletingRequest.value = true
             try {
                 Log.d("delete-request-id", requestId)
                 val response = deleteRequestUseCase.execute(getAuthToken().toString(), requestId)
                 Log.d("HistoryViewModel", "Delete Request Response: $response")
                 if (response.statusCode == "200") {
-                    // Update the request history list after successful deletion
-                    val updatedList = _requestHistoryResponseList.value?.getOrNull()
-                        ?.filter { it.bloodRequest.id != requestId }
-                    _requestHistoryResponseList.value = Result.success(updatedList ?: listOf())
-
                     // Notify success
                     _deleteRequestResponse.value =
                         Result.success(response.message ?: "Request deleted successfully")
@@ -139,9 +134,17 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                 Log.e("HistoryViewModel", "Error deleting request: ${e.message}")
             } finally {
                 _deleteRequestResponse.value?.let { onResponse(it) }
-                isDeletingRequest.value=false
+                isDeletingRequest.value = false
             }
         }
+    }
+
+    fun updateAfterDeletion(requestId: String?) {
+        // Update the request history list after successful deletion
+        val updatedList = _requestHistoryResponseList.value?.getOrNull()
+            ?.filter { it.bloodRequest.id != requestId }
+        _requestHistoryResponseList.value = Result.success(updatedList ?: listOf())
+
     }
 
     fun toggleRequestStatus(
@@ -151,7 +154,8 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         isToggleStatusRequestFetching.value = mapOf(requestId to true)
         viewModelScope.launch {
             try {
-                val response = toggleRequestStatusUseCase.execute(getAuthToken().toString(), requestId)
+                val response =
+                    toggleRequestStatusUseCase.execute(getAuthToken().toString(), requestId)
                 Log.d("response_toggle", response.toString())
                 onToggleStatus(
                     BackendResponse(
@@ -185,5 +189,17 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                 isToggleStatusRequestFetching.value = mapOf(requestId to false)
             }
         }
+    }
+
+    // Define a method to reset all mutable states to their initial values
+    fun resetUiStates() {
+        _requestHistoryResponseList.value = null
+        _donorListResponse.value = null
+        _deleteRequestResponse.value = null
+        isRequestFetching.value = false
+        _isDonorListFetching.value = false
+        isDeletingRequest.value = false
+        isToggleStatusRequestFetching.value = emptyMap()
+        _recomposeTime.value = -1L
     }
 }

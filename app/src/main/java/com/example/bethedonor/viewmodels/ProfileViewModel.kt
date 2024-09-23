@@ -306,4 +306,24 @@ class ProfileViewModel(application: Application, ) : AndroidViewModel(applicatio
         }
     }
 
+    fun resetUiStates() {
+        // Reset MutableStateFlow properties
+        _selectedState.value = ""
+        _selectedDistrict.value = ""
+        _selectedCity.value = ""
+        _selectedPinCode.value = ""
+        _availableToDonate.value = false
+
+        // Reset mutableStateOf properties
+        hasFetchedProfile.value = false
+        updateProfileUiState.value = RegistrationUiState()
+        requestInProgress.value = false
+        deletingAccountProgress.value = false
+        updatingProfileInProgress.value = false
+
+        // Reset API response states
+        _profileResponse.value = null
+        _retryFlag.value = false
+        _deleteAccountResponse.value = null
+    }
 }

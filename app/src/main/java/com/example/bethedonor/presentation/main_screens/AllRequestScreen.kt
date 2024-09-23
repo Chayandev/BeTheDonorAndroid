@@ -17,13 +17,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,6 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.privacysandbox.tools.core.model.Types.unit
 import com.example.bethedonor.R
 import com.example.bethedonor.domain.model.RequestCardDetails
 import com.example.bethedonor.ui.components.AllRequestCard
@@ -60,12 +65,10 @@ import com.example.bethedonor.constants.getDistrictList
 import com.example.bethedonor.constants.getPinCodeList
 import com.example.bethedonor.constants.getStateDataList
 import com.example.bethedonor.presentation.temporay_screen.NetworkFailureScreen
+import com.example.bethedonor.presentation.temporay_screen.NoResultFoundScreen
+import com.example.bethedonor.ui.theme.bloodRed2
 import com.example.bethedonor.viewmodels.AllRequestViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,168 +81,172 @@ fun AllRequestScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val allBloodRequestResponseList by allRequestViewModel.allBloodRequestResponseList.collectAsState(
-        null
-    )
-    val currentUserDetails by allRequestViewModel.currentUserDetails.collectAsState(null)
-
-    val isLoading by allRequestViewModel.isRequestFetching.collectAsState()
-    val searchText by allRequestViewModel.searchText.collectAsState()
-    val filterState by allRequestViewModel.filterState.collectAsState()
-    val filterDistrict by allRequestViewModel.filterDistrict.collectAsState()
-    val filterCity by allRequestViewModel.filterCity.collectAsState()
-    val filterPin by allRequestViewModel.filterPin.collectAsState()
-    val retryFlag by allRequestViewModel.retryFlag.collectAsState()
-    val switchStatus by allRequestViewModel.switchChecked.collectAsState()
-    val isNetworkConnected by allRequestViewModel.isNetworkConnected.collectAsState()
-    val isRefreshing by allRequestViewModel.isRefreshing.collectAsState()
-    val pullToRefreshState = rememberPullToRefreshState()
-
+    val uiState by allRequestViewModel.uiState.collectAsState()
     val lazyListState = rememberLazyListState()
-    //**********
-    val hasFetchedRequests by allRequestViewModel.hasFetchedResult.collectAsState()
-    LaunchedEffect(isNetworkConnected) {
-        if (isNetworkConnected && (retryFlag || !hasFetchedRequests)) {
+    val pullToRefreshState = rememberPullToRefreshState()
+    val onRefresh: () -> Unit = {
+        scope.launch {
+            allRequestViewModel.setRefresherStatusTrue()
             networkCall(
                 allRequestViewModel = allRequestViewModel,
             )
         }
     }
-//    // Use LaunchedEffect to reset the scroll position when data changes
-//    LaunchedEffect(isRefreshing) {
-//        // Reset the scroll state to the top when the list changes
-//        lazyListState.scrollToItem(0)
-//    }
+    LaunchedEffect(uiState.isNetworkConnected) {
+        if (uiState.isNetworkConnected && (uiState.retryFlag || !uiState.hasFetchedResult)) {
+            networkCall(
+                allRequestViewModel = allRequestViewModel,
+            )
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBarComponent(
-                searchText,
-                allRequestViewModel,
-                filterState,
-                filterDistrict,
-                filterCity,
-                filterPin,
-                switchStatus = switchStatus
+                searchText = uiState.searchText,
+                allRequestViewModel = allRequestViewModel,
+                filterState = uiState.filterState,
+                filterDistrict = uiState.filterDistrict,
+                filterCity = uiState.filterCity,
+                filterPin = uiState.filterPin,
+                switchStatus = uiState.switchChecked
             )
         },
-        modifier = Modifier.nestedScroll(pullToRefreshState.nestedScrollConnection),
         containerColor = bgDarkBlue
     ) { padding ->
         Box(
             contentAlignment = Alignment.TopCenter
         ) {
             Surface(color = bgDarkBlue) {
-                allBloodRequestResponseList?.let { result ->
+                uiState.allBloodRequestResponseList?.let { result ->
                     val bloodRequestsWithUsers = if (result.isSuccess) {
                         result.getOrNull()
                     } else {
-                        listOf()
+                        null
                     }
+                    if (bloodRequestsWithUsers != null && bloodRequestsWithUsers.isEmpty()) {
+                        NoResultFoundScreen()
+                        return@Surface
+                    }
+                    if (uiState.isFiltered) {
+                        scope.launch {
+                            lazyListState.scrollToItem(0)
+                            allRequestViewModel.setIsFiltered(false)
+                        }
+                    }
+//                    PullToRefreshBox(
+//                        isRefreshing = uiState.isRefreshing, onRefresh = onRefresh,
+//                        state = pullToRefreshState,
+//                        indicator = {
+//                            PullToRefreshDefaults.Indicator(
+//                                state = pullToRefreshState,
+//                                isRefreshing = uiState.isRefreshing,
+//                                containerColor = fadeBlue11,
+//                                color = bloodRed2,
+//                                modifier = Modifier.align(Alignment.TopCenter),
+//                            )
+//                        }
+//                    )
+                    // {
                     bloodRequestsWithUsers?.let {
-                        LazyColumn(state = lazyListState) {
-                            item {
-                                Spacer(modifier = Modifier.height(padding.calculateTopPadding()))
+                        PullToRefreshBox(
+                            isRefreshing = uiState.isRefreshing, onRefresh = onRefresh,
+                            state = pullToRefreshState,
+                            indicator = {
+                                PullToRefreshDefaults.Indicator(
+                                    state = pullToRefreshState,
+                                    isRefreshing = uiState.isRefreshing,
+                                    containerColor = fadeBlue11,
+                                    color = bloodRed2,
+                                    modifier = Modifier.align(Alignment.TopCenter).padding(
+                                        if (uiState.isRefreshing) {
+                                            innerPadding.calculateBottomPadding() + 20.dp
+                                        } else 0.dp
+                                    ),
+                                )
                             }
-                            items(
-                                items = bloodRequestsWithUsers,
-                                key = { requestWithUser -> requestWithUser.bloodRequest.id }
-                            ) { requestWithUser ->
-                                val isDonor = remember { mutableStateOf(false) }
-                                val iSUserCreation = remember {
-                                    mutableStateOf(false)
+                        ) {
+                            LazyColumn(state = lazyListState) {
+                                item {
+                                    Spacer(modifier = Modifier.height(padding.calculateTopPadding()))
                                 }
-                                currentUserDetails?.let { userResult ->
-                                    if (userResult.isSuccess) {
-                                        userResult.getOrNull()?.let { userResponse ->
-                                            isDonor.value =
-                                                userResponse.myProfile?.donates?.contains(
-                                                    requestWithUser.bloodRequest.id
-                                                )
-                                                    ?: false
+                                items(
+                                    items = bloodRequestsWithUsers,
+                                    key = { requestWithUser -> requestWithUser.bloodRequest.id }
+                                ) { requestWithUser ->
+                                    val isDonor = remember { mutableStateOf(false) }
+                                    val iSUserCreation = remember {
+                                        mutableStateOf(false)
+                                    }
+                                    uiState.currentUserDetails?.let { userResult ->
+                                        if (userResult.isSuccess) {
+                                            userResult.getOrNull()?.let { userResponse ->
+                                                isDonor.value =
+                                                    userResponse.myProfile?.donates?.contains(
+                                                        requestWithUser.bloodRequest.id
+                                                    )
+                                                        ?: false
 
-                                            iSUserCreation.value =
-                                                requestWithUser.bloodRequest.userId == (userResponse.myProfile?.id
-                                                    ?: false)
+                                                iSUserCreation.value =
+                                                    requestWithUser.bloodRequest.userId == (userResponse.myProfile?.id
+                                                        ?: false)
+                                            }
                                         }
                                     }
-                                }
 
-                                val cardDetails = RequestCardDetails(
-                                    name = requestWithUser.user.name ?: "",
-                                    emailId = requestWithUser.user.email ?: "",
-                                    phoneNo = requestWithUser.user.phoneNumber ?: "",
-                                    address = "${requestWithUser.bloodRequest.state}, ${requestWithUser.bloodRequest.district}, ${requestWithUser.bloodRequest.city}, ${requestWithUser.bloodRequest.pin}",
-                                    exactPlace = requestWithUser.bloodRequest.donationCenter,
-                                    bloodUnit = requestWithUser.bloodRequest.bloodUnit,
-                                    bloodGroup = requestWithUser.bloodRequest.bloodGroup,
-                                    noOfAcceptors = requestWithUser.bloodRequest.donors.size,
-                                    dueDate = formatDate(requestWithUser.bloodRequest.deadline),
-                                    postDate = dateDiffInDays(requestWithUser.bloodRequest.createdAt).toString(),
-                                    isOpen = !requestWithUser.bloodRequest.isClosed,
-                                    isAcceptor = isDonor.value,
-                                    isMyCreation = iSUserCreation.value
-                                )
-                                AllRequestCard(
-                                    details = cardDetails,
-                                    allRequestViewModel,
-                                    id = requestWithUser.bloodRequest.id,
-                                    onDonationClickResponse = {
-                                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                                    }
-                                )
+                                    val cardDetails = RequestCardDetails(
+                                        name = requestWithUser.user.name ?: "",
+                                        emailId = requestWithUser.user.email ?: "",
+                                        phoneNo = requestWithUser.user.phoneNumber ?: "",
+                                        address = "${requestWithUser.bloodRequest.state}, ${requestWithUser.bloodRequest.district}, ${requestWithUser.bloodRequest.city}, ${requestWithUser.bloodRequest.pin}",
+                                        exactPlace = requestWithUser.bloodRequest.donationCenter,
+                                        bloodUnit = requestWithUser.bloodRequest.bloodUnit,
+                                        bloodGroup = requestWithUser.bloodRequest.bloodGroup,
+                                        noOfAcceptors = requestWithUser.bloodRequest.donors.size,
+                                        dueDate = formatDate(requestWithUser.bloodRequest.deadline),
+                                        postDate = dateDiffInDays(requestWithUser.bloodRequest.createdAt).toString(),
+                                        isOpen = !requestWithUser.bloodRequest.isClosed,
+                                        isAcceptor = isDonor.value,
+                                        isMyCreation = iSUserCreation.value
+                                    )
+                                    AllRequestCard(
+                                        details = cardDetails,
+                                        allRequestViewModel,
+                                        id = requestWithUser.bloodRequest.id,
+                                        onDonationClickResponse = {
+                                            Toast.makeText(context, it, Toast.LENGTH_SHORT)
+                                                .show()
+                                        }
+                                    )
+                                }
+                                item {
+                                    Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 8.dp))
+                                }
                             }
-                            item {
-                                Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 8.dp))
-                            }
-                        }
-                    } ?: EmptyStateComponent()
+                        } ?: NoResultFoundScreen()
+                    }
                 }
             }
-            if (retryFlag) {
+            if (uiState.retryFlag) {
                 Retry(message = stringResource(id = R.string.error), onRetry = {
                     networkCall(
                         allRequestViewModel = allRequestViewModel,
                     )
                 })
             }
-            if (isRefreshing)
-                PullToRefreshContainer(
-                    state = pullToRefreshState,
-                    modifier = Modifier.padding(innerPadding.calculateBottomPadding() + 20.dp)
-                )
-        }
-        LaunchedEffect(isRefreshing) {
-            if (isRefreshing) {
-                pullToRefreshState.startRefresh()
-            } else {
-                pullToRefreshState.endRefresh()
-            }
-        }
-        if (pullToRefreshState.isRefreshing) {
-            LaunchedEffect(true) {
-                allRequestViewModel.setRefresherStatusTrue()
-                networkCall(
-                    allRequestViewModel = allRequestViewModel,
-                )
-            }
         }
     }
-    if (isLoading && !isRefreshing) {
+    if (uiState.isRequestFetching && !uiState.isRefreshing) {
         LoadingScreen()
     }
-    if(!isNetworkConnected){
-         NetworkFailureScreen(onRetry = {
-             networkCall(
-                 allRequestViewModel = allRequestViewModel,
-             )
-         })
+    if (!uiState.isNetworkConnected) {
+        NetworkFailureScreen(onRetry = {
+            networkCall(
+                allRequestViewModel = allRequestViewModel,
+            )
+        })
     }
 }
-
-@Composable
-fun EmptyStateComponent() {
-    Text(text = "Empty", color = Color.White)
-}
+//}
 
 @Composable
 fun TopAppBarComponent(
@@ -287,7 +294,8 @@ fun TopAppBarComponent(
                         onCheckedChange = {
                             allRequestViewModel.setSwitchChecked(it)
                         },
-                        enabled = !allRequestViewModel.isRequestFetching.collectAsState().value && !allRequestViewModel.isRefreshing.collectAsState().value,
+                        enabled = (!allRequestViewModel.uiState.collectAsState().value.isRequestFetching
+                                && !allRequestViewModel.uiState.collectAsState().value.isRefreshing),
                         colors = SwitchDefaults.colors(
                             checkedBorderColor = Color.Transparent,
                             checkedThumbColor = Color.White,
@@ -352,23 +360,7 @@ fun TopAppBarComponent(
 }
 
 fun networkCall(allRequestViewModel: AllRequestViewModel) {
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            // Launch both network calls in parallel using async
-            val getAllBloodRequestDeferred = async {
-                allRequestViewModel.getAllBloodRequest()
-            }
-            val fetchCurrentUserDetailsDeferred = async {
-                allRequestViewModel.fetchCurrentUserDetails()
-            }
-            // Await the results of both calls
-            awaitAll(getAllBloodRequestDeferred, fetchCurrentUserDetailsDeferred)
-            // Handle any additional logic if needed after both calls are complete
-        } catch (e: Exception) {
-            // Handle any exceptions that occur during the network calls
-            e.printStackTrace()
-        }
-    }
+    allRequestViewModel.parallelNetworkCall()
 }
 
 @Preview

@@ -21,9 +21,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.toRoute
+import com.example.bethedonor.data.dataModels.Donor
 import com.example.bethedonor.ui.components.BottomNavBar
 import com.example.bethedonor.presentation.main_screens.AllRequestScreen
 import com.example.bethedonor.presentation.main_screens.CreateRequestScreen
+import com.example.bethedonor.presentation.main_screens.DonorProfileScreen
 import com.example.bethedonor.presentation.main_screens.EditEmailScreen
 import com.example.bethedonor.presentation.main_screens.HistoryScreen
 import com.example.bethedonor.presentation.main_screens.HomeScreen
@@ -184,8 +187,48 @@ fun NavigationStack(
                     mainViewModel.historyViewModel,
                     innerPadding,
                     mainViewModel.sharedViewModel,
+                    onDonorScreenNavigate = {
+                        navController.navigate(
+                            Destination.DonorProfile(
+                                it.name,
+                                it.email,
+                                it.state,
+                                it.city,
+                                it.district,
+                                it.pin,
+                                it.phoneNumber,
+                                it.bloodGroup?:""
+                            )
+                        )
+                    }
                 )
             }
+
+            composable<Destination.DonorProfile>(exitTransition = {
+                return@composable slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    tween(300, easing = EaseInQuad)
+                )
+            },
+                enterTransition = {
+                    return@composable slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        tween(300, easing = EaseOutQuad)
+                    )
+                }) { backStackEntry ->
+                val donor = backStackEntry.toRoute<Destination.DonorProfile>()
+                DonorProfileScreen(
+                    name = donor.name,
+                    email = donor.email,
+                    state = donor.state,
+                    city = donor.city,
+                    district = donor.district,
+                    pin = donor.pin,
+                    phoneNumber = donor.phoneNumber,
+                    bloodGroup = donor.bloodGroup?:""
+                )
+            }
+
             composable<Destination.Profile>(
                 enterTransition = {
                     return@composable fadeIn(animationSpec = tween(300)) + slideInVertically(
@@ -206,6 +249,7 @@ fun NavigationStack(
                         navController.navigate(Destination.Login) {
                             popUpTo(0)
                         }
+                        mainViewModel.resettingViewModelState()
                     },
                     onEmailEditNavigate = {
                         navController.navigate(Destination.EmailEdit)
@@ -214,6 +258,7 @@ fun NavigationStack(
                     sharedViewModel = mainViewModel.sharedViewModel,
                 )
             }
+
             composable<Destination.EmailEdit>(
                 exitTransition = {
                     return@composable slideOutOfContainer(

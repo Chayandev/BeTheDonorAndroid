@@ -94,7 +94,10 @@ fun AllRequestCard(
         mutableStateOf(details.isAcceptor)
     }
     // Collect the state map from the viewModel
-    val requestingToAccept by viewModel.requestingToAccept.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Access the requestingToAccept map
+    val requestingToAccept = uiState.requestingToAccept
 
     // Access the specific value for the provided id
     val isRequesting = requestingToAccept[id] ?: false
@@ -343,9 +346,9 @@ fun AllRequestCard(
                             viewModel.acceptDonation(
                                 requestId = id
                             ) { response ->
-                                if (response.getOrNull()?.statusCode != null) {
+                                if (response.isSuccess && response.getOrNull()?.bloodRequest != null) {
                                     isAcceptor.value = true
-                                    donorCount.intValue += 1
+                                    donorCount.intValue = response.getOrNull()!!.bloodRequest!!.donors.size
                                     onDonationClickResponse(
                                         response.getOrNull()?.message ?: "Error"
                                     )

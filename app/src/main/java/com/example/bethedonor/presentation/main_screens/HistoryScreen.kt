@@ -4,6 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.bethedonor.R
+import com.example.bethedonor.data.dataModels.Donor
 import com.example.bethedonor.ui.components.AcceptorDetailsCard
 import com.example.bethedonor.ui.components.ProgressIndicatorComponent
 import com.example.bethedonor.ui.components.RequestHistoryCard
@@ -61,6 +67,7 @@ import com.example.bethedonor.utils.dateDiffInDays
 import com.example.bethedonor.utils.formatDate
 import com.example.bethedonor.viewmodels.HistoryViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class TabItem(
@@ -73,6 +80,7 @@ fun HistoryScreen(
     historyViewModel: HistoryViewModel,
     innerPadding: PaddingValues,
     sharedViewModel: SharedViewModel,
+    onDonorScreenNavigate: (Donor) -> Unit
 ) {
     val context = LocalContext.current
     val tabItem = listOf(
@@ -85,6 +93,7 @@ fun HistoryScreen(
     var selectedTabIndex by remember {
         mutableIntStateOf(0)
     }
+
 
     LaunchedEffect(selectedTabIndex) {
         pagerState.scrollToPage(selectedTabIndex)
@@ -140,7 +149,9 @@ fun HistoryScreen(
                         when (page) {
                             0 -> RequestScreen(
                                 historyViewModel = historyViewModel,
-                                innerPadding
+                                innerPadding, onDonorScreenNavigate = {donor->
+                                    onDonorScreenNavigate(donor)
+                                }
                             )
                             //1 -> DonationScreen() // Create DonationScreen similar to RequestScreen
                         }
@@ -158,7 +169,7 @@ fun HistoryScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValues) {
+fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValues,onDonorScreenNavigate: (Donor) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
@@ -168,7 +179,9 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
         null
     )
     var retryFlag by remember { mutableStateOf(false) }
-
+    val deletingItemId = remember {
+        mutableStateOf<String?>(null)
+    }
     LaunchedEffect(Unit) {
         if (retryFlag || historyViewModel.shouldFetch())
             networkCall(historyViewModel = historyViewModel, id = 1)
@@ -203,51 +216,80 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                             items = requestHistory,
                             key = { it.bloodRequest.id }
                         ) { requestHistory ->
-                            RequestHistoryCard(
-                                historyViewModel = historyViewModel,
-                                id = requestHistory.bloodRequest.id,
-                                donationCenter = requestHistory.bloodRequest.donationCenter,
-                                state = requestHistory.bloodRequest.state,
-                                district = requestHistory.bloodRequest.district,
-                                pin = requestHistory.bloodRequest.pin,
-                                count = requestHistory.bloodRequest.donors.size,
-                                bloodGroup = requestHistory.bloodRequest.bloodGroup,
-                                bloodUnit = requestHistory.bloodRequest.bloodUnit,
-                                createdAt = dateDiffInDays(requestHistory.bloodRequest.createdAt).toString(),
-                                deadline = formatDate(requestHistory.bloodRequest.deadline),
-                                isClosed = requestHistory.bloodRequest.isClosed,
-                                onAcceptorIconClick = {
-                                    showBottomSheet = true
-                                    scope.launch {
-                                        networkCall(
-                                            historyViewModel,
-                                            0,
-                                            requestHistory.bloodRequest.id
-                                        )
-                                    }
-                                },
-                                onDeleteConfirmation = {
-                                    Log.d("onDeleteConfirmation", "Clicked")
-                                    historyViewModel.deleteRequest(
-                                        requestHistory.bloodRequest.id,
-                                        onResponse = { message ->
-                                            showToast(
-                                                context = context,
-                                                message = message.getOrNull()?:context.getString(R.string.error)
+                            // Check if the current item is being deleted
+                            var isDeleting by remember { mutableStateOf(false) }
+
+                            AnimatedVisibility(
+                                visible = !isDeleting,
+                                enter = fadeIn(),
+                                exit = slideOutHorizontally(
+                                    targetOffsetX = { it },
+                                    animationSpec = tween(200)
+                                ) + fadeOut(), // Slide-out and fade-out effect
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                RequestHistoryCard(
+                                    historyViewModel = historyViewModel,
+                                    id = requestHistory.bloodRequest.id,
+                                    donationCenter = requestHistory.bloodRequest.donationCenter,
+                                    state = requestHistory.bloodRequest.state,
+                                    district = requestHistory.bloodRequest.district,
+                                    pin = requestHistory.bloodRequest.pin,
+                                    count = requestHistory.bloodRequest.donors.size,
+                                    bloodGroup = requestHistory.bloodRequest.bloodGroup,
+                                    bloodUnit = requestHistory.bloodRequest.bloodUnit,
+                                    createdAt = dateDiffInDays(requestHistory.bloodRequest.createdAt).toString(),
+                                    deadline = formatDate(requestHistory.bloodRequest.deadline),
+                                    isClosed = requestHistory.bloodRequest.isClosed,
+                                    onAcceptorIconClick = {
+                                        showBottomSheet = true
+                                        scope.launch {
+                                            networkCall(
+                                                historyViewModel,
+                                                0,
+                                                requestHistory.bloodRequest.id
                                             )
                                         }
-                                    )
-                                },
-                                onToggleStatus = {
-                                    showToast(context = context, message = it)
-                                }
-                            )
+                                    },
+                                    onDeleteConfirmation = {
+                                        Log.d("onDeleteConfirmation", "Clicked")
+                                        deletingItemId.value=requestHistory.bloodRequest.id
+                                        historyViewModel.deleteRequest(
+                                            requestHistory.bloodRequest.id,
+                                            onResponse = { message ->
+                                                showToast(
+                                                    context = context,
+                                                    message = message.getOrNull()
+                                                        ?: context.getString(R.string.error)
+                                                )
+                                                if (message.isSuccess && message.getOrNull().isNullOrEmpty()) {
+                                                    // If the request was successfully deleted
+                                                    scope.launch {
+                                                        isDeleting =
+                                                            true // Start the deletion animation
+                                                        delay(300) // Give time for the animation to run
+                                                        historyViewModel.updateAfterDeletion(deletingItemId.value)
+                                                    }
+                                                } else {
+                                                    // If the deletion fails, do nothing
+                                                    isDeleting = false // Ensure no animation occurs
+                                                }
+
+                                            }
+                                        )
+                                    },
+                                    onToggleStatus = {
+                                        showToast(context = context, message = it)
+                                    }
+                                )
+                            }
                         }
                         item {
                             Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 16.dp))
                         }
                     }
                 }
+
             }
         }
         if (historyViewModel.isDeletingRequest.collectAsState().value) {
@@ -277,8 +319,11 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                     donors?.let {
                         LazyColumn {
                             items(items = donors, key = { it.phoneNumber }) { donor ->
-                                AcceptorDetailsCard(donnerDetails = donor, onCall = {phoneNo->
-                                    moveToCallActivity(context,phoneNo)
+                                AcceptorDetailsCard(donnerDetails = donor, onCall = { phoneNo ->
+                                    moveToCallActivity(context, phoneNo)
+                                }, onClick = {
+                                    showBottomSheet=false
+                                    onDonorScreenNavigate(donor)
                                 })
                             }
                         }
@@ -308,7 +353,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
     }
 }
 
-fun moveToCallActivity(context: Context,phoneNo: String) {
+fun moveToCallActivity(context: Context, phoneNo: String) {
     // Create an intent to open the dialer
     val intent = Intent(Intent.ACTION_DIAL).apply {
         data = Uri.parse("tel:$phoneNo")

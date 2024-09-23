@@ -1,5 +1,6 @@
 package com.example.bethedonor
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -28,14 +29,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
-    // Lazily initialize NetworkConnectivityMonitor
-  //  private val networkMonitor by lazy { NetworkConnectivityMonitor(this@MainActivity) }
-
     // Initialize MainViewModel with a factory
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModelFactory(application)
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -66,13 +63,18 @@ class MainActivity : ComponentActivity() {
                     NavigationStack(
                         selectedDestination = startDestination,
                         navController = rememberNavController(),
-                        mainViewModel = mainViewModel
+                        mainViewModel = mainViewModel,
                     )
                 }
             }
         }
     }
-
+//    private fun clearViewModelsOnLogout() {
+//        // Restart the activity to reinitialize all ViewModels
+//        val intent = Intent(this, MainActivity::class.java)
+//        finish()
+//        startActivity(intent)
+//    }
     // Function to load area data asynchronously
     private fun loadAreaData() {
         lifecycleScope.launch {
