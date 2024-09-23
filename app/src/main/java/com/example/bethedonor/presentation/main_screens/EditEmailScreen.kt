@@ -42,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -183,6 +185,7 @@ fun OTPDialog(
         }
     }
 
+
     ModalBottomSheet(
         onDismissRequest = {
             coroutineScope.launch {
@@ -203,6 +206,10 @@ fun OTPDialog(
         // State for enabling/disabling the resend button
         val isResendEnabled = remember { mutableStateOf(false) }
 
+        // hols the focus requests to move them auto
+        val focusRequesters = List(6) { FocusRequester() }
+
+
         // Effect to start the countdown timer
         LaunchedEffect(key1 = timerState.intValue) {
             if (timerState.intValue > 0) {
@@ -215,6 +222,7 @@ fun OTPDialog(
 
         // Check if all OTP fields are filled
         val isOtpComplete = otpState.all { it.isNotEmpty() }
+
 
         Box(
             modifier = Modifier
@@ -261,16 +269,24 @@ fun OTPDialog(
                             onValueChange = { newChar ->
                                 if (newChar.length <= 1) {
                                     otpState[index] = newChar
+                                    if (newChar.isNotEmpty() && index < otpState.lastIndex) {
+                                        // Move focus to the next field
+                                        focusRequesters[index + 1].requestFocus()
+                                    }
+                                } else if (newChar.isEmpty() && index > 0) {
+                                    // Move focus back to the previous field if cleared
+                                    focusRequesters[index - 1].requestFocus()
                                 }
                             },
-                            isOtpComplete = isOtpComplete
+                            isOtpComplete = isOtpComplete,
+                            focusRequester = focusRequesters[index]
                         )
                     }
                 }
 
                 // Display countdown timer and resend button
                 Text(
-                    text = if (timerState.intValue > 0) "Resend OTP in ${(timerState.intValue)} seconds else stringResource" else stringResource(
+                    text = if (timerState.intValue > 0) "Resend OTP in ${(timerState.intValue)} seconds" else stringResource(
                         id = R.string.don_t_receive_otp
                     ),
                     style = MaterialTheme.typography.bodyLarge,
@@ -321,14 +337,17 @@ fun OTPDialog(
 fun OTPDigitField(
     value: String,
     onValueChange: (String) -> Unit,
-    isOtpComplete: Boolean
+    isOtpComplete: Boolean,
+    focusRequester: FocusRequester
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier
             .width(50.dp)
-            .height(50.dp),
+            .height(50.dp)
+            .focusRequester(focusRequester)
+        ,
         textStyle = MaterialTheme.typography.bodyLarge.copy(
             textAlign = TextAlign.Center,
             color = if (isOtpComplete) teal else Color.White,
@@ -343,7 +362,6 @@ fun OTPDigitField(
         ),
         keyboardOptions = KeyboardOptions.Default.copy(
             keyboardType = KeyboardType.Number,
-            imeAction = ImeAction.Next
         ),
     )
 }

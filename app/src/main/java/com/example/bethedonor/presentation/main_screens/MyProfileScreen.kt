@@ -413,7 +413,7 @@ fun ProfileScreen(
                                     dialogIcon = Icons.Filled.DeleteForever,
                                     onConfirmAction = {
                                         profileViewmodel.deleteAccount() { result ->
-                                            if (result.isSuccess) {
+                                            if (result.isSuccess && result.getOrNull()?.statusCode==context.getString(R.string.status_code_success)) {
                                                 // Handle the success case
                                                 val response = result.getOrNull()
                                                 Toast.makeText(

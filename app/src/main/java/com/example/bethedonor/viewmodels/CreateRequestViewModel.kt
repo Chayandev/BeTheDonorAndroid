@@ -13,12 +13,26 @@ import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.domain.usecase.CreateRequestUseCase
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
 import com.example.bethedonor.ui.utils.uistate.RegistrationUiState
-import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.utils.Validator
 import com.example.bethedonor.utils.toDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+
+//***** Combined Registration UI State *****//
+data class MyProfileUiState(
+    val state: String = "",
+    val district: String = "",
+    val city: String = "",
+    val pinCode: String = "",
+    val bloodGroup: String = "",
+    val bloodUnit: String = "",
+    val donationCenter: String = "",
+    val date: String = "",
+    val requestInProgress: Boolean = false
+)
 
 class CreateRequestViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -28,61 +42,61 @@ class CreateRequestViewModel(application: Application) : AndroidViewModel(applic
     // Helper function to get the auth token from DataStore
     private fun getAuthToken(): String? = preferencesManager.jwtToken
 
+    // MutableStateFlow to manage UI state with initial state as AllRequestUiState
+    private val _uiState = MutableStateFlow(MyProfileUiState())
+    val uiState: StateFlow<MyProfileUiState> get() = _uiState
+
     // UI State to hold the data of the new request
     var newRequestUiState = mutableStateOf(RegistrationUiState())
 
-    // UI state for selected fields in the bottom sheet
-    // MutableStateFlow for UI state
-    private val _selectedState = MutableStateFlow("")
-    val selectedState: StateFlow<String> = _selectedState
+    //***** API Service & Repository Initialization *****//
+    private val apiService = RetrofitClient.instance
+    private val userRepository = UserRepositoryImp(apiService)
+    private val createNewBloodRequestUseCase = CreateRequestUseCase(userRepository)
 
-    private val _selectedDistrict = MutableStateFlow("")
-    val selectedDistrict: StateFlow<String>  = _selectedDistrict
-
-    private val _selectedCity = MutableStateFlow("")
-    val selectedCity: StateFlow<String> = _selectedCity
-
-    private val _selectedPinCode = MutableStateFlow("")
-    val selectedPinCode: StateFlow<String> = _selectedPinCode
-
-    private val _requestInProgress = MutableStateFlow(false)
-    val requestInProgress: StateFlow<Boolean>get() = _requestInProgress
-
-    //***** Event Handler for UI Interaction *****//
+    //***** Event Handler for UI Interaction on inputs *****//
     fun onEvent(event: RegistrationUIEvent) {
         newRequestUiState.value = when (event) {
             is RegistrationUIEvent.StateValueChangeEvent -> newRequestUiState.value.copy(
                 state = event.state,
                 stateErrorState = Validator.validateString(event.state)
             )
+
             is RegistrationUIEvent.DistrictValueChangeEvent -> newRequestUiState.value.copy(
                 district = event.district,
                 districtErrorState = Validator.validateString(event.district)
             )
+
             is RegistrationUIEvent.CityValueChangeEvent -> newRequestUiState.value.copy(
                 city = event.city,
                 cityErrorState = Validator.validateString(event.city)
             )
+
             is RegistrationUIEvent.PinCodeValueChangeEvent -> newRequestUiState.value.copy(
                 pinCode = event.pinCode,
                 pinCodeErrorState = Validator.validatePinCode(event.pinCode)
             )
+
             is RegistrationUIEvent.BloodGroupValueChangeEvent -> newRequestUiState.value.copy(
                 bloodGroup = event.bloodGroup,
                 bloodGroupErrorState = Validator.validateString(event.bloodGroup)
             )
+
             is RegistrationUIEvent.BloodUnitValueChangeEvent -> newRequestUiState.value.copy(
                 bloodUnit = event.unit,
                 bloodUnitErrorState = Validator.validateBloodUnit(event.unit)
             )
+
             is RegistrationUIEvent.DonationCenterValueChangeEvent -> newRequestUiState.value.copy(
                 donationCenter = event.center,
                 donationCenterErrorState = Validator.validateString(event.center)
             )
+
             is RegistrationUIEvent.DateValueChangeEvent -> newRequestUiState.value.copy(
                 date = event.date,
                 deadLineErrorState = Validator.validateString(event.date)
             )
+
             else -> newRequestUiState.value // Handle other events if needed
         }
     }
@@ -102,26 +116,23 @@ class CreateRequestViewModel(application: Application) : AndroidViewModel(applic
     }
 
     //***** Network Call to Create a New Blood Request *****//
-    private val apiService = RetrofitClient.instance
-    private val userRepository = UserRepositoryImp(apiService)
-    private val createNewBloodRequestUseCase = CreateRequestUseCase(userRepository)
-
     fun createNewBloodRequest(onCreated: (BackendResponse) -> Unit) {
         if (validateWithRulesForNewRequest()) {
-            _requestInProgress.value = true
+            _uiState.update { it.copy(requestInProgress = true) }
             val bloodRequest = buildNewBloodRequest() // Build request from UI state
-
             viewModelScope.launch {
                 try {
-                    val response = createNewBloodRequestUseCase.execute(getAuthToken().toString(), bloodRequest)
+                    val response = createNewBloodRequestUseCase.execute(
+                        getAuthToken().toString(),
+                        bloodRequest
+                    )
                     Log.d("Response", response.toString())
                     onCreated(response)
                 } catch (e: Exception) {
                     Log.e("Error", e.message ?: "Unknown error")
                     onCreated(BackendResponse(message = "Exception: ${e.message}"))
                 } finally {
-                    clearUiState() // Clear the form after submission
-                    _requestInProgress.value = false
+                    _uiState.update { it.copy(requestInProgress = false) }
                 }
             }
         } else {
@@ -129,7 +140,7 @@ class CreateRequestViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    // Helper to build NewBloodRequest from UI state
+    //****** Helper to build NewBloodRequest from UI state ******
     private fun buildNewBloodRequest(): NewBloodRequest {
         return NewBloodRequest(
             donationCenter = newRequestUiState.value.donationCenter,
@@ -144,54 +155,55 @@ class CreateRequestViewModel(application: Application) : AndroidViewModel(applic
     }
 
     //***** Clear UI State After Request Submission *****//
-    private fun clearUiState() {
+     fun resetUiState() {
         newRequestUiState.value = RegistrationUiState()
-        _selectedState.value = ""
-        _selectedDistrict.value=""
-        _selectedCity.value = ""
-        _selectedPinCode.value = ""
+        _uiState.value = MyProfileUiState()
     }
 
     //***** Helper Methods for Selection Logic *****//
     fun selectState(state: String) {
-        _selectedState.value = state
-        Log.d("selection",state)
-        clearSelectionsFor("state") // Clear dependent selections
+        _uiState.update { it.copy(state = state) }
+        clearDependentSelections("state")
     }
 
     fun selectDistrict(district: String) {
-        _selectedDistrict.value = district
-        Log.d("selection",district)
-        clearSelectionsFor("district")
+        _uiState.update { it.copy(district = district) }
+        clearDependentSelections("district")
     }
-    fun selectPin(pinCode: String) {
-        _selectedPinCode.value = pinCode
-        Log.d("selection",pinCode)
-        clearSelectionsFor("pin")
-    }
+
     fun selectCity(city: String) {
-        _selectedCity.value = city
+        _uiState.update { it.copy(city = city) }
     }
 
+    fun selectPin(pinCode: String) {
+        _uiState.update { it.copy(pinCode = pinCode) }
+        clearDependentSelections("pin")
+    }
 
-    // Clear dependent selections based on the selected field
-    private fun clearSelectionsFor(level: String) {
-        Log.d("clearSelection",level)
+    //***** Clear Dependent Selections *****//
+    private fun clearDependentSelections(level: String) {
         when (level) {
             "state" -> {
-                Log.d("clearSelection",level)
-                _selectedDistrict.value=""
-                _selectedCity.value = ""
-                _selectedPinCode.value = ""
+                _uiState.update {
+                    it.copy(
+                        district = "",
+                        city = "",
+                        pinCode = ""
+                    )
+                }
             }
+
             "district" -> {
-                Log.d("clearSelection",level)
-                _selectedCity.value = ""
-                _selectedPinCode.value = ""
+                _uiState.update {
+                    it.copy(
+                        city = "",
+                        pinCode = ""
+                    )
+                }
             }
-            "pin"->{
-                Log.d("clearSelection",level)
-                _selectedCity.value = ""
+
+            "pin" -> {
+                _uiState.update { it.copy(city = "") }
             }
         }
     }
