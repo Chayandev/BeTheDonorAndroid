@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 
 
 //***** Combined Registration UI State *****//
-data class MyProfileUiState(
+data class NewRequestUiState(
     val state: String = "",
     val district: String = "",
     val city: String = "",
@@ -39,12 +39,15 @@ class CreateRequestViewModel(application: Application) : AndroidViewModel(applic
     //***** Initialize Preferences Manager for accessing DataStore *****//
     private val preferencesManager = PreferencesManager(getApplication())
 
-    // Helper function to get the auth token from DataStore
+    /**
+     * Retrieves the JWT token from the PreferencesManager.
+     * @return the JWT token as a String.
+     */
     private fun getAuthToken(): String? = preferencesManager.jwtToken
 
     // MutableStateFlow to manage UI state with initial state as AllRequestUiState
-    private val _uiState = MutableStateFlow(MyProfileUiState())
-    val uiState: StateFlow<MyProfileUiState> get() = _uiState
+    private val _uiState = MutableStateFlow(NewRequestUiState())
+    val uiState: StateFlow<NewRequestUiState> get() = _uiState
 
     // UI State to hold the data of the new request
     var newRequestUiState = mutableStateOf(RegistrationUiState())
@@ -157,7 +160,7 @@ class CreateRequestViewModel(application: Application) : AndroidViewModel(applic
     //***** Clear UI State After Request Submission *****//
      fun resetUiState() {
         newRequestUiState.value = RegistrationUiState()
-        _uiState.value = MyProfileUiState()
+        _uiState.value = NewRequestUiState()
     }
 
     //***** Helper Methods for Selection Logic *****//
@@ -191,6 +194,22 @@ class CreateRequestViewModel(application: Application) : AndroidViewModel(applic
                         pinCode = ""
                     )
                 }
+
+                onEvent(
+                    RegistrationUIEvent.DistrictValueChangeEvent(
+                        _uiState.value.district
+                    )
+                )
+                onEvent(
+                    RegistrationUIEvent.CityValueChangeEvent(
+                        _uiState.value.city
+                    )
+                )
+                onEvent(
+                    RegistrationUIEvent.PinCodeValueChangeEvent(
+                        _uiState.value.pinCode
+                    )
+                )
             }
 
             "district" -> {
@@ -200,10 +219,26 @@ class CreateRequestViewModel(application: Application) : AndroidViewModel(applic
                         pinCode = ""
                     )
                 }
+                onEvent(
+                    RegistrationUIEvent.CityValueChangeEvent(
+                        _uiState.value.city
+                    )
+                )
+                onEvent(
+                    RegistrationUIEvent.PinCodeValueChangeEvent(
+                        _uiState.value.pinCode
+                    )
+                )
             }
 
             "pin" -> {
                 _uiState.update { it.copy(city = "") }
+
+                onEvent(
+                    RegistrationUIEvent.CityValueChangeEvent(
+                        _uiState.value.city
+                    )
+                )
             }
         }
     }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,78 +59,89 @@ fun DonorProfileScreen(
     ) { padding ->
         Column(
             modifier = Modifier
-                .padding(top = padding.calculateTopPadding() * 3/2, start = 16.dp, end = 16.dp)
-                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(
+                    top = padding.calculateTopPadding() * 3 / 2,
+                    bottom = padding.calculateTopPadding(),
+                    end = 16.dp,
+                    start = 16.dp
+                )
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column(
-                Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .background(bloodRed2, shape = RoundedCornerShape(60.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-
-                    Text(
-                        text = getInitials(
-                            name
-                        ),
-                        fontSize = MaterialTheme.typography.headlineLarge.fontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .background(bloodRed2, shape = RoundedCornerShape(60.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        Text(
+                            text = getInitials(
+                                name
+                            ),
+                            fontSize = MaterialTheme.typography.headlineLarge.fontSize,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "$state, $district",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Gray3
+                        )
+                        Text(
+                            text = "$city, $pin",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Gray3
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                Column(
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    InformationComponent(
+                        icon = Icons.Outlined.Phone,
+                        label = "Phone",
+                        value = phoneNumber
                     )
-                    Text(
-                        text = "$state, $district",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Gray3
+                    InformationComponent(
+                        icon = Icons.Outlined.Transgender,
+                        label = "Gender",
+                        value = "NA"
                     )
-                    Text(
-                        text = "$city, $pin",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Gray3
+                    InformationComponent(
+                        icon = Icons.Outlined.Bloodtype,
+                        label = "Blood Group",
+                        value = bloodGroup
+                    )
+                    InformationComponent(
+                        icon = Icons.Filled.Favorite,
+                        label = "Acknowledgements",
+                        value = "89"
                     )
                 }
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-            Column(
-                horizontalAlignment = Alignment.Start
-            ) {
-                InformationComponent(
-                    icon = Icons.Outlined.Phone,
-                    label = "Phone",
-                    value = phoneNumber
-                )
-                InformationComponent(
-                    icon = Icons.Outlined.Transgender,
-                    label = "Gender",
-                    value = "NA"
-                )
-                InformationComponent(
-                    icon = Icons.Outlined.Bloodtype,
-                    label = "Blood Group",
-                    value = bloodGroup
-                )
-                InformationComponent(
-                    icon = Icons.Filled.Favorite,
-                    label = "Acknowledgements",
-                    value = "89"
-                )
             }
             ButtonComponent(buttonText = "Acknowledge", onButtonClick = {
                 //Acknowledge
@@ -157,4 +169,19 @@ fun TopBarComponent() {
             color = Color.White
         )
     }
+}
+
+@Preview
+@Composable
+fun DonorProfileScreenPreview() {
+    DonorProfileScreen(
+        name = "Chayandev Bera",
+        email = "",
+        state = "West Bengal",
+        city = "Kolkata",
+        district = "Kolkata",
+        pin = "700046",
+        phoneNumber = "7478637540",
+        bloodGroup = "B+"
+    )
 }

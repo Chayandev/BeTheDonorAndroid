@@ -21,6 +21,7 @@ data class BloodRequestWithUser(
     val bloodRequest: BloodRequest,
     val user: UserProfile
 )
+
 data class AllRequestUiState(
     val hasFetchedResult: Boolean = false,
     val retryFlag: Boolean = false,
@@ -37,7 +38,7 @@ data class AllRequestUiState(
     val isNetworkConnected: Boolean = true,
     val isRequestFetching: Boolean = false,
     val requestingToAccept: Map<String, Boolean> = emptyMap(),
-    val isFiltered:Boolean=false
+    val isFiltered: Boolean = false
 )
 
 
@@ -47,7 +48,7 @@ class AllRequestViewModel(
 
     // Preferences manager for JWT token retrieval
     private val preferencesManager = PreferencesManager(getApplication())
-    private fun getAuthToken(): String? = preferencesManager.jwtToken
+
 
     // MutableStateFlow to manage UI state with initial state as AllRequestUiState
     private val _uiState = MutableStateFlow(AllRequestUiState())
@@ -56,10 +57,18 @@ class AllRequestViewModel(
     // API service and repositories for data fetching and processing
     private val apiService = RetrofitClient.instance
     private val userRepository = UserRepositoryImp(apiService)
+
+    // Use Cases
     private val getAllBloodRequestsUseCase = GetAllBloodRequestsUseCase(userRepository)
     private val fetchUserDetailsUseCase = FetchUserDetailsUseCase(userRepository)
     private val getUserProfileUserUseCase = GetUserProfileUseCase(userRepository)
     private val acceptDonationUseCase = AcceptDonationUseCase(userRepository)
+
+    /**
+     * Retrieves the JWT token from the PreferencesManager.
+     * @return the JWT token as a String.
+     */
+    private fun getAuthToken(): String? = preferencesManager.jwtToken
 
     /**
      * Updates the switchChecked state and filters blood requests based on the switch value.
@@ -72,13 +81,14 @@ class AllRequestViewModel(
     /**
      * Updates the refresh status state with value true
      */
-    fun setRefresherStatusTrue(){
+    fun setRefresherStatusTrue() {
         _uiState.update { it.copy(isRefreshing = true) }
     }
 
-    fun setIsFiltered(value:Boolean){
-         _uiState.update { it.copy(isFiltered=value) }
+    fun setIsFiltered(value: Boolean) {
+        _uiState.update { it.copy(isFiltered = value) }
     }
+
     /**
      * Filters blood requests based on the switch value (open/closed).
      */
@@ -109,12 +119,12 @@ class AllRequestViewModel(
     }
 
 
-    fun parallelNetworkCall(){
+    fun parallelNetworkCall() {
         viewModelScope.launch {
             try {
                 // Launch both network calls in parallel using async
                 val getAllBloodRequestDeferred = async {
-                   getAllBloodRequest()
+                    getAllBloodRequest()
                 }
                 val fetchCurrentUserDetailsDeferred = async {
                     fetchCurrentUserDetails()
@@ -144,7 +154,10 @@ class AllRequestViewModel(
                     // Fetch user details for each blood request asynchronously
                     val bloodRequestWithUsersDeferred = response.bloodRequests.map { bloodRequest ->
                         async {
-                            val userResponse = fetchUserDetailsUseCase.execute(getAuthToken().toString(), bloodRequest.userId)
+                            val userResponse = fetchUserDetailsUseCase.execute(
+                                getAuthToken().toString(),
+                                bloodRequest.userId
+                            )
                             if (userResponse.user == null) {
                                 throw Exception("Failed to fetch user details for request: ${bloodRequest.userId}")
                             }
@@ -230,7 +243,15 @@ class AllRequestViewModel(
             val updatedProfileResponse = profileResponse.myProfile?.copy(
                 donates = (profileResponse.myProfile.donates ?: emptyList()) + requestId
             )
-            _uiState.update { it.copy(currentUserDetails = Result.success(profileResponse.copy(myProfile = updatedProfileResponse))) }
+            _uiState.update {
+                it.copy(
+                    currentUserDetails = Result.success(
+                        profileResponse.copy(
+                            myProfile = updatedProfileResponse
+                        )
+                    )
+                )
+            }
         }
     }
 
@@ -326,7 +347,8 @@ class AllRequestViewModel(
     private fun filterBloodRequests() {
         try {
             _uiState.update { it.copy(isFiltered = true) }
-            val result = if (_uiState.value.switchChecked) uiState.value.allBloodRequestResponseList else uiState.value.allBloodRequestResponse
+            val result =
+                if (_uiState.value.switchChecked) uiState.value.allBloodRequestResponseList else uiState.value.allBloodRequestResponse
             val query = _uiState.value.searchText.trim()
 
             val filteredResult = result?.let {
@@ -384,7 +406,10 @@ class AllRequestViewModel(
         pin: String
     ): Boolean {
         return (state.isEmpty() || this.state.contains(state.trim(), ignoreCase = true)) &&
-                (district.isEmpty() || this.district.contains(district.trim(), ignoreCase = true)) &&
+                (district.isEmpty() || this.district.contains(
+                    district.trim(),
+                    ignoreCase = true
+                )) &&
                 (city.isEmpty() || this.city.contains(city.trim(), ignoreCase = true)) &&
                 (pin.isEmpty() || this.pin.contains(pin.trim(), ignoreCase = true))
     }

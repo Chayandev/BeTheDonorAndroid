@@ -32,20 +32,16 @@ import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Transgender
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -63,7 +59,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -101,7 +96,6 @@ import com.example.bethedonor.utils.getInitials
 import com.example.bethedonor.utils.getPhoneNoWithoutCountryCode
 import com.example.bethedonor.constants.getPinCodeList
 import com.example.bethedonor.constants.getStateDataList
-import com.example.bethedonor.ui.theme.teal
 import com.example.bethedonor.viewmodels.ProfileViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
 import kotlinx.coroutines.launch
@@ -119,7 +113,9 @@ fun ProfileScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val coroutineScope = rememberCoroutineScope()
-    val profileResponse by profileViewmodel.profileResponse.collectAsState(null)
+
+    val uiState by profileViewmodel.uiState.collectAsState()
+
     val profileData = remember {
         mutableStateOf<UserProfile?>(null)
     }
@@ -127,8 +123,6 @@ fun ProfileScreen(
         skipPartiallyExpanded = true
     )
     var showBottomSheetForEditProfile by remember { mutableStateOf(false) }
-    val retryFlag by profileViewmodel.retryFlag.collectAsState()
-    val isRefreshing by profileViewmodel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
     val onRefresh: () -> Unit = {
         coroutineScope.launch {
@@ -139,19 +133,11 @@ fun ProfileScreen(
         }
     }
 
-    val selectedState by profileViewmodel.selectedState.collectAsState()
-    val selectedDistrict by profileViewmodel.selectedDistrict.collectAsState()
-    val selectedCity by profileViewmodel.selectedCity.collectAsState()
-    val selectedPinCode by profileViewmodel.selectedPinCode.collectAsState()
-    val availableToDonate by profileViewmodel.availableToDonate.collectAsState()
     //**********
-
-    val hasFetchedProfile = profileViewmodel.getFetchedProfile()
     LaunchedEffect(Unit) {
-        Log.d("retryFlagFromProfile", retryFlag.toString())
-        if (retryFlag || !hasFetchedProfile) {
+        Log.d("retryFlagFromProfile", uiState.retryFlag.toString())
+        if (uiState.retryFlag || !uiState.hasFetchedProfile) {
             networkCall(profileViewmodel)
-            profileViewmodel.setFetchedProfile(true)
         }
     }
     Box(
@@ -163,12 +149,12 @@ fun ProfileScreen(
                 .fillMaxSize(),
         ) {
             PullToRefreshBox(
-                isRefreshing = isRefreshing, onRefresh = onRefresh,
+                isRefreshing = uiState.isRefreshing, onRefresh = onRefresh,
                 state = pullToRefreshState,
                 indicator = {
                     PullToRefreshDefaults.Indicator(
                         state = pullToRefreshState,
-                        isRefreshing = isRefreshing,
+                        isRefreshing = uiState.isRefreshing,
                         containerColor = fadeBlue11,
                         color = bloodRed2,
                         modifier = Modifier.align(Alignment.TopCenter),
@@ -182,13 +168,13 @@ fun ProfileScreen(
                             color = bgDarkBlue
                         )
                 ) {
-                    profileResponse?.let { result ->
+                    uiState.profileResponse?.let { result ->
                         profileData.value = if (result.getOrNull()?.myProfile != null) {
                             result.getOrNull()?.myProfile
                         } else {
-                            profileViewmodel.setRetryFlag(true)
                             null
                         }
+
                         profileData.value?.let {
                             Column(
                                 verticalArrangement = Arrangement.Center,
@@ -404,7 +390,7 @@ fun ProfileScreen(
                                 })
                                 SpacerComponent(16.dp)
                                 ButtonComponent(
-                                    isEnable = !profileViewmodel.requestInProgress.value,
+                                    isEnable = !uiState.requestInProgress,
                                     buttonText = "Delete Account",
                                     onButtonClick = {},
                                     showDialog = true,
@@ -413,7 +399,10 @@ fun ProfileScreen(
                                     dialogIcon = Icons.Filled.DeleteForever,
                                     onConfirmAction = {
                                         profileViewmodel.deleteAccount() { result ->
-                                            if (result.isSuccess && result.getOrNull()?.statusCode==context.getString(R.string.status_code_success)) {
+                                            if (result.isSuccess && result.getOrNull()?.statusCode == context.getString(
+                                                    R.string.status_code_success
+                                                )
+                                            ) {
                                                 // Handle the success case
                                                 val response = result.getOrNull()
                                                 Toast.makeText(
@@ -445,39 +434,15 @@ fun ProfileScreen(
                         }
 
                     }
-//                LaunchedEffect(isRefreshing) {
-//                    if (isRefreshing) {
-//                        pullToRefreshState.startRefresh()
-//                    } else {
-//                        pullToRefreshState.endRefresh()
-//                    }
-//                }
-//                if (pullToRefreshState.isRefreshing) {
-//                    LaunchedEffect(true) {
-//                        profileViewmodel.setRefresherStatusTrue()
-//                        networkCall(profileViewmodel)
-//                    }
-//                }
-//                PullToRefreshContainer(
-//                    state = pullToRefreshState, modifier = Modifier.align(
-//                        Alignment.TopCenter
-//                    )
-//                )
+//
                 }
 
             }
             val recheckFiled by remember {
                 mutableStateOf(false)
             }
-            if (showBottomSheetForEditProfile) {
-                profileViewmodel.setAllProfileDetails(
-                    profileData.value?.state ?: "",
-                    profileData.value?.district ?: "",
-                    profileData.value?.city ?: "",
-                    profileData.value?.pin ?: "",
-                    profileData.value?.available ?: false
-                )
 
+            if (showBottomSheetForEditProfile) {
                 ModalBottomSheet(
                     onDismissRequest = {
                         showBottomSheetForEditProfile = false
@@ -488,52 +453,12 @@ fun ProfileScreen(
                     containerColor = fadeBlue11,
 
                     ) {
-                    val isFieldChanged = remember {
-                        mutableStateOf(false)
-                    }
-                    LaunchedEffect(showBottomSheetForEditProfile) {
-                        Log.d("modalSheetLaunchEffect", "InEffect")
-                        profileViewmodel.onEvent(
-                            RegistrationUIEvent.GenderValueChangeEvent(
-                                profileData.value?.gender.toString()
-                            )
-                        )
-                        profileViewmodel.onEvent(
-                            RegistrationUIEvent.StateValueChangeEvent(
-                                profileData.value?.state.toString()
-                            )
-                        )
-                        profileViewmodel.onEvent(
-                            RegistrationUIEvent.DistrictValueChangeEvent(
-                                profileData.value?.district.toString()
-                            )
-                        )
-                        profileViewmodel.onEvent(
-                            RegistrationUIEvent.CityValueChangeEvent(
-                                profileData.value?.city.toString()
-                            )
-                        )
-                        profileViewmodel.onEvent(
-                            RegistrationUIEvent.PinCodeValueChangeEvent(
-                                profileData.value?.pin.toString()
-                            )
-                        )
-                        profileViewmodel.onEvent(
-                            RegistrationUIEvent.AvailabilityCheckerValueChangeEvent(
-                                profileData.value?.available ?: false
-                            )
-                        )
-                        isFieldChanged.value = false
-                    }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier
                             .padding(
-                                top = 16.dp,
-                                bottom = innerPadding.calculateBottomPadding(),
-                                start = 16.dp,
-                                end = 16.dp
+                                16.dp
                             )
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
@@ -587,7 +512,7 @@ fun ProfileScreen(
                                     index = genderList.indexOf(profileData.value?.gender),
                                     label = stringResource(id = R.string.label_gender),
                                     onSelection = {
-                                        isFieldChanged.value = true
+                                        //isFieldChanged.value = true
                                         profileViewmodel.onEvent(
                                             RegistrationUIEvent.GenderValueChangeEvent(it)
                                         )
@@ -598,9 +523,9 @@ fun ProfileScreen(
                                 SelectStateDistrictCityField(
                                     label = stringResource(id = R.string.label_state),
                                     options = getStateDataList(),
-                                    selectedValue = selectedState,
+                                    selectedValue = uiState.selectedState,
                                     onSelection = {
-                                        isFieldChanged.value = true
+                                        //isFieldChanged.value = true
                                         profileViewmodel.onEvent(
                                             RegistrationUIEvent.StateValueChangeEvent(
                                                 it
@@ -616,10 +541,10 @@ fun ProfileScreen(
                                 )
                                 SelectStateDistrictCityField(
                                     label = stringResource(id = R.string.label_district),
-                                    options = getDistrictList(selectedState),
-                                    selectedValue = selectedDistrict,
+                                    options = getDistrictList(uiState.selectedState),
+                                    selectedValue = uiState.selectedDistrict,
                                     onSelection = {
-                                        isFieldChanged.value = true
+                                        //     isFieldChanged.value = true
                                         profileViewmodel.onEvent(
                                             RegistrationUIEvent.DistrictValueChangeEvent(
                                                 it
@@ -637,12 +562,12 @@ fun ProfileScreen(
                                 SelectStateDistrictCityField(
                                     label = stringResource(id = R.string.label_pin),
                                     options = getPinCodeList(
-                                        selectedState = selectedState,
-                                        selectedDistrict = selectedDistrict,
+                                        selectedState = uiState.selectedState,
+                                        selectedDistrict = uiState.selectedDistrict,
                                     ),
-                                    selectedValue = selectedPinCode,
+                                    selectedValue = uiState.selectedPinCode,
                                     onSelection = {
-                                        isFieldChanged.value = true
+                                        // isFieldChanged.value = true
                                         profileViewmodel.onEvent(
                                             RegistrationUIEvent.PinCodeValueChangeEvent(
                                                 it
@@ -660,13 +585,13 @@ fun ProfileScreen(
                                 SelectStateDistrictCityField(
                                     label = stringResource(id = R.string.label_city),
                                     options = getCityList(
-                                        selectedState = selectedState,
-                                        selectedDistrict = selectedDistrict,
-                                        selectedPinCode = selectedPinCode
+                                        selectedState = uiState.selectedState,
+                                        selectedDistrict = uiState.selectedDistrict,
+                                        selectedPinCode = uiState.selectedPinCode
                                     ),
-                                    selectedValue = selectedCity,
+                                    selectedValue = uiState.selectedCity,
                                     onSelection = {
-                                        isFieldChanged.value = true
+                                        //isFieldChanged.value = true
                                         profileViewmodel.onEvent(
                                             RegistrationUIEvent.CityValueChangeEvent(
                                                 it
@@ -683,7 +608,7 @@ fun ProfileScreen(
                                 )
 
                                 AvailabilityCheckerField(
-                                    value = availableToDonate,
+                                    value = uiState.availableToDonate,
                                     onCheckerChange = {
                                         profileViewmodel.onEvent(
                                             RegistrationUIEvent.AvailabilityCheckerValueChangeEvent(
@@ -697,7 +622,7 @@ fun ProfileScreen(
                                 ButtonComponent(
                                     buttonText = stringResource(id = R.string.apply),
                                     onButtonClick = {
-                                        if (isFieldChanged.value && !profileViewmodel.validateWithRulesForUpdate()) {
+                                        if (!profileViewmodel.validateWithRulesForUpdate()) {
                                             showToast(
                                                 context = context,
                                                 context.getString(R.string.message)
@@ -727,21 +652,17 @@ fun ProfileScreen(
                 }
             }
 
-            if (profileViewmodel.requestInProgress.value && !isRefreshing) {
-                profileViewmodel.setRetryFlag(false)
+            if (uiState.requestInProgress && !uiState.isRefreshing) {
                 ProgressIndicatorComponent(label = stringResource(id = R.string.loading_indicator))
             }
-            if (profileViewmodel.deletingAccountProgress.value) {
-                profileViewmodel.setRetryFlag(false)
+            if (uiState.deletingAccountProgress) {
                 ProgressIndicatorComponent(label = stringResource(id = R.string.delete_account_indicator))
             }
-            if (profileViewmodel.updatingProfileInProgress.value) {
-                profileViewmodel.setRetryFlag(false)
+            if (uiState.updatingProfileInProgress) {
                 ProgressIndicatorComponent(label = stringResource(id = R.string.updating_profile_indicator))
             }
-            if (retryFlag) {
+            if (uiState.retryFlag) {
                 Retry(message = stringResource(id = R.string.error), onRetry = {
-                    profileViewmodel.setRetryFlag(false)
                     networkCall(
                         profileViewmodel,
                     )
@@ -750,6 +671,7 @@ fun ProfileScreen(
         }
     }
 }
+
 
 private fun networkCall(
     profileViewmodel: ProfileViewModel,

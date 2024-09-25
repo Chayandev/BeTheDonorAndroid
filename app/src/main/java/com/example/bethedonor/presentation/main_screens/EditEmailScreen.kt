@@ -346,8 +346,7 @@ fun OTPDigitField(
         modifier = Modifier
             .width(50.dp)
             .height(50.dp)
-            .focusRequester(focusRequester)
-        ,
+            .focusRequester(focusRequester),
         textStyle = MaterialTheme.typography.bodyLarge.copy(
             textAlign = TextAlign.Center,
             color = if (isOtpComplete) teal else Color.White,
