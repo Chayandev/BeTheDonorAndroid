@@ -133,20 +133,6 @@ fun AllRequestScreen(
                             allRequestViewModel.setIsFiltered(false)
                         }
                     }
-//                    PullToRefreshBox(
-//                        isRefreshing = uiState.isRefreshing, onRefresh = onRefresh,
-//                        state = pullToRefreshState,
-//                        indicator = {
-//                            PullToRefreshDefaults.Indicator(
-//                                state = pullToRefreshState,
-//                                isRefreshing = uiState.isRefreshing,
-//                                containerColor = fadeBlue11,
-//                                color = bloodRed2,
-//                                modifier = Modifier.align(Alignment.TopCenter),
-//                            )
-//                        }
-//                    )
-                    // {
                     bloodRequestsWithUsers?.let {
                         PullToRefreshBox(
                             isRefreshing = uiState.isRefreshing, onRefresh = onRefresh,
@@ -222,7 +208,7 @@ fun AllRequestScreen(
                                     Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 8.dp))
                                 }
                             }
-                        } ?: NoResultFoundScreen()
+                        }
                     }
                 }
             }
@@ -246,7 +232,6 @@ fun AllRequestScreen(
         })
     }
 }
-//}
 
 @Composable
 fun TopAppBarComponent(

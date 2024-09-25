@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.bethedonor.utils.NetworkConnectivityMonitor
 
 // MainViewModel that holds other ViewModels
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -21,6 +20,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         profileViewModel.resetUiStates()
         historyViewModel.resetUiStates()
         allRequestViewModel.resetUiState()
+        createRequestViewModel.resetUiState()
     }
 
 }

@@ -27,7 +27,7 @@ class EditEmailViewModel(application: Application) : AndroidViewModel(applicatio
     // ***** access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
 
-    fun getAuthToken():String?{
+    private fun getAuthToken():String?{
         return preferencesManager.jwtToken
     }
     //*************************************
@@ -42,22 +42,8 @@ class EditEmailViewModel(application: Application) : AndroidViewModel(applicatio
                     emailIdErrorState = Validator.validateEmailId(event.emailId)
                 )
             }
+            else ->editEmailUiState.value
 
-            is RegistrationUIEvent.AvailabilityCheckerValueChangeEvent -> {}
-            is RegistrationUIEvent.BloodGroupValueChangeEvent -> {}
-            is RegistrationUIEvent.BloodUnitValueChangeEvent -> {}
-            is RegistrationUIEvent.CityValueChangeEvent -> {}
-            is RegistrationUIEvent.ConfirmPasswordValueChangeEvent -> {}
-            is RegistrationUIEvent.DateValueChangeEvent -> {}
-            is RegistrationUIEvent.DistrictValueChangeEvent -> {}
-            is RegistrationUIEvent.DonationCenterValueChangeEvent -> {}
-            is RegistrationUIEvent.GenderValueChangeEvent -> {}
-            is RegistrationUIEvent.NameValueChangeEvent -> {}
-            is RegistrationUIEvent.PasswordValueChangeEvent -> {}
-            is RegistrationUIEvent.PhoneNoChangeEvent -> {}
-            is RegistrationUIEvent.PinCodeValueChangeEvent -> {}
-            RegistrationUIEvent.RegistrationButtonClick -> {}
-            is RegistrationUIEvent.StateValueChangeEvent -> {}
         }
     }
 
