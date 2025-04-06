@@ -14,144 +14,167 @@ import com.example.bethedonor.domain.usecase.DeleteRequestUseCase
 import com.example.bethedonor.domain.usecase.GetDonorListUseCase
 import com.example.bethedonor.domain.usecase.GetRequestHistoryUseCase
 import com.example.bethedonor.domain.usecase.ToggleRequestStatusUseCase
-import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+
+/**
+ * Data class to hold the UI state for HistoryViewModel.
+ * Includes various state flags and data related to requests and donors.
+ */
+data class UiState(
+    val isRequestFetching: Boolean = false,
+    val isDonorListFetching: Boolean = false,
+    val isDeletingRequest: Boolean = false,
+    val isToggleStatusRequestFetching: Map<String, Boolean> = emptyMap(),
+    val requestHistory: Result<List<RequestHistory>>? = null,
+    val donorListResponse: Result<DonorListResponse>? = null,
+    val deleteRequestResponse: Result<String>? = null,
+    val recomposeTime: Long = -1L
+)
 
 data class RequestHistory(
     val bloodRequest: BloodRequest
 )
 
 class HistoryViewModel(application: Application) : AndroidViewModel(application) {
-    // ***** access the datastore ***** //
+
+    // ***** Access the datastore ***** //
     private val preferencesManager = PreferencesManager(getApplication())
 
-    private fun getAuthToken(): String? {
-        return preferencesManager.jwtToken
-    }
-    //*************************
+    /**
+     * Retrieves the JWT token from the PreferencesManager.
+     * @return the JWT token as a String.
+     */
+    private fun getAuthToken(): String? = preferencesManager.jwtToken
 
-    private val _requestHistoryResponseList = MutableStateFlow<Result<List<RequestHistory>>?>(null)
-    val requestHistoryResponseList: StateFlow<Result<List<RequestHistory>>?> =
-        _requestHistoryResponseList
-
+    // ***** UseCase and Repository Setup ***** //
     private val apiService = RetrofitClient.instance
     private val userRepository = UserRepositoryImp(apiService)
     private val getRequestHistoryUseCase = GetRequestHistoryUseCase(userRepository)
     private val getDonorListUseCase = GetDonorListUseCase(userRepository)
     private val deleteRequestUseCase = DeleteRequestUseCase(userRepository)
     private val toggleRequestStatusUseCase = ToggleRequestStatusUseCase(userRepository)
-    private val _isDonorListFetching = MutableStateFlow(false)
-    val isDonorListFetching: StateFlow<Boolean> = _isDonorListFetching
 
-    private val _donorListResponse = MutableStateFlow<Result<DonorListResponse>?>(null)
-    val donorListResponse: StateFlow<Result<DonorListResponse>?> = _donorListResponse
+    // ***** UI State ***** //
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState
 
-    private val _deleteRequestResponse = MutableStateFlow<Result<String>?>(null)
-    val deleteRequestResponse: StateFlow<Result<String>?> = _deleteRequestResponse
-
-    private var _toggleStatusResult: BackendResponse? = null
-
-
-    val isRequestFetching = MutableStateFlow(false)
-    val isDeletingRequest = MutableStateFlow(false)
-    val isToggleStatusRequestFetching = MutableStateFlow(mapOf<String, Boolean>())
-
-    private val _recomposeTime = MutableStateFlow(-1L)
-    val recomposeTime: StateFlow<Long> = _recomposeTime
-
+    /**
+     * Updates the recompose time and triggers UI recomposition if necessary.
+     */
     fun updateRecomposeTime() {
-        _recomposeTime.value += 1
+        _uiState.value = _uiState.value.copy(recomposeTime = _uiState.value.recomposeTime + 1)
     }
 
+    /**
+     * Checks whether the request history should be fetched based on the recompose time.
+     * Returns true if fetching is needed, otherwise false.
+     */
     fun shouldFetch(): Boolean {
-        return (_recomposeTime.value % 3).toInt() == 0;
+        return (_uiState.value.recomposeTime % 3).toInt() == 0
     }
 
+    /**
+     * Fetches the request history from the backend using GetRequestHistoryUseCase.
+     * Updates the state with the fetched request history or an error message.
+     */
     fun fetchRequestHistory() {
         viewModelScope.launch {
-            isRequestFetching.value = true
+            _uiState.value = _uiState.value.copy(isRequestFetching = true)
             try {
-                // Fetch request history
                 val response = getRequestHistoryUseCase.execute(getAuthToken().toString())
                 if (response.bloodRequests != null) {
-                    // Wrap BloodRequest in RequestHistory
                     val requestHistoryList = response.bloodRequests.map { RequestHistory(it) }
-                    _requestHistoryResponseList.value = Result.success(requestHistoryList)
+                    _uiState.value =
+                        _uiState.value.copy(requestHistory = Result.success(requestHistoryList))
                 } else {
-                    _requestHistoryResponseList.value = Result.failure(Exception(response.message))
+                    _uiState.value =
+                        _uiState.value.copy(requestHistory = Result.failure(Exception(response.message)))
                 }
                 Log.d("HistoryViewModel", response.toString())
-                Log.d("HistoryViewModel", "${requestHistoryResponseList.value}")
             } catch (e: Exception) {
-                _requestHistoryResponseList.value = Result.failure(e)
+                _uiState.value = _uiState.value.copy(requestHistory = Result.failure(e))
             } finally {
-                isRequestFetching.value = false
+                _uiState.value = _uiState.value.copy(isRequestFetching = false)
             }
         }
     }
 
+    /**
+     * Fetches the donor list for a specific request.
+     * Updates the state with the donor list or an error message.
+     */
     fun fetchDonorList(requestId: String) {
-        _donorListResponse.value = null
+        _uiState.value = _uiState.value.copy(donorListResponse = null)
         viewModelScope.launch {
-            _isDonorListFetching.value = true
+            _uiState.value = _uiState.value.copy(isDonorListFetching = true)
             try {
                 val response = getDonorListUseCase.execute(getAuthToken().toString(), requestId)
                 if (response.donors != null) {
-                    _donorListResponse.value = Result.success(response)
+                    _uiState.value =
+                        _uiState.value.copy(donorListResponse = Result.success(response))
                 } else {
-                    _donorListResponse.value = Result.failure(Exception(response.message))
+                    _uiState.value =
+                        _uiState.value.copy(donorListResponse = Result.failure(Exception(response.message)))
                 }
                 Log.d("HistoryViewModel", "Donor List Response: $response")
             } catch (e: Exception) {
-                _donorListResponse.value = Result.failure(e)
+                _uiState.value = _uiState.value.copy(donorListResponse = Result.failure(e))
                 Log.e("HistoryViewModel", "Error fetching donor list: ${e.message}")
             } finally {
-                _isDonorListFetching.value = false
+                _uiState.value = _uiState.value.copy(isDonorListFetching = false)
             }
         }
     }
 
+    /**
+     * Deletes a blood request and updates the state with the result.
+     * Calls the provided onResponse callback with the result of the deletion.
+     */
     fun deleteRequest(requestId: String, onResponse: (Result<String>) -> Unit) {
         viewModelScope.launch {
-            isDeletingRequest.value = true
+            _uiState.value = _uiState.value.copy(isDeletingRequest = true)
             try {
-                Log.d("delete-request-id", requestId)
                 val response = deleteRequestUseCase.execute(getAuthToken().toString(), requestId)
                 Log.d("HistoryViewModel", "Delete Request Response: $response")
                 if (response.statusCode == "200") {
-                    // Notify success
-                    _deleteRequestResponse.value =
-                        Result.success(response.message ?: "Request deleted successfully")
+                    _uiState.value = _uiState.value.copy(
+                        deleteRequestResponse = Result.success(
+                            response.message ?: "Request deleted successfully"
+                        )
+                    )
                 } else {
-                    // Notify failure if status code is not 200
-                    _deleteRequestResponse.value =
-                        Result.failure(Exception("Error: ${response.message}"))
+                    _uiState.value =
+                        _uiState.value.copy(deleteRequestResponse = Result.failure(Exception("Error: ${response.message}")))
                 }
             } catch (e: Exception) {
-                _deleteRequestResponse.value = Result.failure(e)
+                _uiState.value = _uiState.value.copy(deleteRequestResponse = Result.failure(e))
                 Log.e("HistoryViewModel", "Error deleting request: ${e.message}")
             } finally {
-                _deleteRequestResponse.value?.let { onResponse(it) }
-                isDeletingRequest.value = false
+                _uiState.value.deleteRequestResponse?.let { onResponse(it) }
+                _uiState.value = _uiState.value.copy(isDeletingRequest = false)
             }
         }
     }
 
+    /**
+     * Updates the request history after a successful deletion by removing the deleted request.
+     */
     fun updateAfterDeletion(requestId: String?) {
-        // Update the request history list after successful deletion
-        val updatedList = _requestHistoryResponseList.value?.getOrNull()
-            ?.filter { it.bloodRequest.id != requestId }
-        _requestHistoryResponseList.value = Result.success(updatedList ?: listOf())
-
+        val updatedList =
+            _uiState.value.requestHistory?.getOrNull()?.filter { it.bloodRequest.id != requestId }
+        _uiState.value =
+            _uiState.value.copy(requestHistory = Result.success(updatedList ?: listOf()))
     }
 
-    fun toggleRequestStatus(
-        requestId: String,
-        onToggleStatus: (BackendResponse) -> Unit
-    ) {
-        isToggleStatusRequestFetching.value = mapOf(requestId to true)
+    /**
+     * Toggles the status of a blood request (open/closed).
+     * Updates the state and UI based on the toggle response.
+     */
+    fun toggleRequestStatus(requestId: String, onToggleStatus: (BackendResponse) -> Unit) {
+        _uiState.value =
+            _uiState.value.copy(isToggleStatusRequestFetching = mapOf(requestId to true))
         viewModelScope.launch {
             try {
                 val response =
@@ -164,11 +187,9 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                     )
                 )
 
-                // Find the BloodRequest with the matching requestId and toggle the isClosed field
-                _requestHistoryResponseList.value?.getOrNull()?.let { requestHistoryList ->
+                _uiState.value.requestHistory?.getOrNull()?.let { requestHistoryList ->
                     val updatedRequestHistoryList = requestHistoryList.map { requestHistory ->
                         if (requestHistory.bloodRequest.id == requestId) {
-                            // Toggle the isClosed field
                             requestHistory.copy(
                                 bloodRequest = requestHistory.bloodRequest.copy(
                                     isClosed = !requestHistory.bloodRequest.isClosed
@@ -178,28 +199,24 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                             requestHistory
                         }
                     }
-
-                    // Update the _requestHistoryResponseList with the modified list
-                    _requestHistoryResponseList.value = Result.success(updatedRequestHistoryList)
+                    _uiState.value = _uiState.value.copy(
+                        requestHistory = Result.success(updatedRequestHistoryList)
+                    )
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 onToggleStatus(BackendResponse(message = e.message, statusCode = "500"))
             } finally {
-                isToggleStatusRequestFetching.value = mapOf(requestId to false)
+                _uiState.value =
+                    _uiState.value.copy(isToggleStatusRequestFetching = mapOf(requestId to false))
             }
         }
     }
 
-    // Define a method to reset all mutable states to their initial values
+    /**
+     * Resets all mutable states to their initial values.
+     */
     fun resetUiStates() {
-        _requestHistoryResponseList.value = null
-        _donorListResponse.value = null
-        _deleteRequestResponse.value = null
-        isRequestFetching.value = false
-        _isDonorListFetching.value = false
-        isDeletingRequest.value = false
-        isToggleStatusRequestFetching.value = emptyMap()
-        _recomposeTime.value = -1L
+        _uiState.value = UiState()
     }
 }

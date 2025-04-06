@@ -149,7 +149,7 @@ fun HistoryScreen(
                         when (page) {
                             0 -> RequestScreen(
                                 historyViewModel = historyViewModel,
-                                innerPadding, onDonorScreenNavigate = {donor->
+                                innerPadding, onDonorScreenNavigate = { donor ->
                                     onDonorScreenNavigate(donor)
                                 }
                             )
@@ -169,15 +169,17 @@ fun HistoryScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValues,onDonorScreenNavigate: (Donor) -> Unit) {
+fun RequestScreen(
+    historyViewModel: HistoryViewModel,
+    innerPadding: PaddingValues,
+    onDonorScreenNavigate: (Donor) -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
-    val isLoading by historyViewModel.isRequestFetching.collectAsState()
-    val requestHistoryResponseList by historyViewModel.requestHistoryResponseList.collectAsState(
-        null
-    )
+    val uiState by historyViewModel.uiState.collectAsState()
+
     var retryFlag by remember { mutableStateOf(false) }
     val deletingItemId = remember {
         mutableStateOf<String?>(null)
@@ -188,7 +190,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
     }
     Box(modifier = Modifier.fillMaxSize()) {
         when {
-            isLoading -> {
+            uiState.isRequestFetching -> {
                 ProgressIndicatorComponent(label = stringResource(id = R.string.loading_indicator))
                 retryFlag = false
             }
@@ -200,7 +202,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                 })
             }
 
-            else -> requestHistoryResponseList?.let { result ->
+            else -> uiState.requestHistory?.let { result ->
                 val requestHistory = if (result.isSuccess) {
                     result.getOrNull()
                 } else {
@@ -253,7 +255,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                                     },
                                     onDeleteConfirmation = {
                                         Log.d("onDeleteConfirmation", "Clicked")
-                                        deletingItemId.value=requestHistory.bloodRequest.id
+                                        deletingItemId.value = requestHistory.bloodRequest.id
                                         historyViewModel.deleteRequest(
                                             requestHistory.bloodRequest.id,
                                             onResponse = { message ->
@@ -262,13 +264,15 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                                                     message = message.getOrNull()
                                                         ?: context.getString(R.string.error)
                                                 )
-                                                if (message.isSuccess && message.getOrNull().isNullOrEmpty()) {
+                                                if (message.isSuccess) {
                                                     // If the request was successfully deleted
                                                     scope.launch {
                                                         isDeleting =
                                                             true // Start the deletion animation
                                                         delay(300) // Give time for the animation to run
-                                                        historyViewModel.updateAfterDeletion(deletingItemId.value)
+                                                        historyViewModel.updateAfterDeletion(
+                                                            deletingItemId.value
+                                                        )
                                                     }
                                                 } else {
                                                     // If the deletion fails, do nothing
@@ -292,13 +296,11 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
 
             }
         }
-        if (historyViewModel.isDeletingRequest.collectAsState().value) {
+        if (uiState.isDeletingRequest) {
             ProgressIndicatorComponent(label = stringResource(id = R.string.delete_request_indicator))
         }
     }
     if (showBottomSheet) {
-        val isDonorListFetching by historyViewModel.isDonorListFetching.collectAsState()
-        val donorListResponse by historyViewModel.donorListResponse.collectAsState(null)
         ModalBottomSheet(
             onDismissRequest = {
                 showBottomSheet = false
@@ -310,7 +312,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
 
             ) {
             Box(contentAlignment = Alignment.Center) {
-                donorListResponse?.let { response ->
+                uiState.donorListResponse?.let { response ->
                     if (response.isFailure || response.getOrNull()?.statusCode != stringResource(id = R.string.status_code_success)) {
                         showToast(context = context, message = stringResource(id = R.string.error))
                         return@let
@@ -322,7 +324,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
                                 AcceptorDetailsCard(donnerDetails = donor, onCall = { phoneNo ->
                                     moveToCallActivity(context, phoneNo)
                                 }, onClick = {
-                                    showBottomSheet=false
+                                    showBottomSheet = false
                                     onDonorScreenNavigate(donor)
                                 })
                             }
@@ -344,7 +346,7 @@ fun RequestScreen(historyViewModel: HistoryViewModel, innerPadding: PaddingValue
 
                     }
                 }
-                if (isDonorListFetching) {
+                if (uiState.isDonorListFetching) {
                     ProgressIndicatorComponent(label = stringResource(id = R.string.loading_indicator))
                 }
             }

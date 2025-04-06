@@ -29,7 +29,6 @@ import com.example.bethedonor.ui.components.*
 import com.example.bethedonor.ui.theme.fadeBlue11
 import com.example.bethedonor.ui.utils.commons.showToast
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
-import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.viewmodels.CreateRequestViewModel
 import com.example.bethedonor.viewmodels.SharedViewModel
 
@@ -45,11 +44,15 @@ fun CreateRequestScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val bloodGroupsList = bloodGroupList2
 
-    val selectedState by createRequestViewModel.selectedState.collectAsState()
-    val selectedDistrict by createRequestViewModel.selectedDistrict.collectAsState()
-    val selectedCity by createRequestViewModel.selectedCity.collectAsState()
-    val selectedPinCode by createRequestViewModel.selectedPinCode.collectAsState()
-    val requestInProgress by createRequestViewModel.requestInProgress.collectAsState()
+    val uiState by createRequestViewModel.uiState.collectAsState()
+
+    // DisposableEffect is triggered when the composable enters and leaves the composition
+    DisposableEffect(Unit) {
+        // When this composable leaves the composition, clear the UI state
+        onDispose {
+            createRequestViewModel.resetUiState() // Reset the state when navigating away
+        }
+    }
 
     Surface(
         modifier = Modifier
@@ -101,7 +104,7 @@ fun CreateRequestScreen(
                 SelectStateDistrictCityField(
                     label = stringResource(id = R.string.label_state),
                     options = getStateDataList(),
-                    selectedValue = selectedState,
+                    selectedValue = uiState.state,
                     onSelection = {
                         createRequestViewModel.onEvent(
                             RegistrationUIEvent.StateValueChangeEvent(it)
@@ -116,8 +119,8 @@ fun CreateRequestScreen(
                 )
                 SelectStateDistrictCityField(
                     label = stringResource(id = R.string.label_district),
-                    options = getDistrictList(selectedState),
-                    selectedValue = selectedDistrict,
+                    options = getDistrictList(uiState.state),
+                    selectedValue = uiState.district,
                     onSelection = {
                         createRequestViewModel.onEvent(
                             RegistrationUIEvent.DistrictValueChangeEvent(it)
@@ -133,10 +136,10 @@ fun CreateRequestScreen(
                 SelectStateDistrictCityField(
                     label = stringResource(id = R.string.label_pin),
                     options = getPinCodeList(
-                        selectedState,
-                       selectedDistrict
+                        uiState.state,
+                        uiState.district
                     ),
-                    selectedValue = selectedPinCode,
+                    selectedValue = uiState.pinCode,
                     onSelection = {
                         createRequestViewModel.onEvent(
                             RegistrationUIEvent.PinCodeValueChangeEvent(it)
@@ -152,9 +155,11 @@ fun CreateRequestScreen(
                 SelectStateDistrictCityField(
                     label = stringResource(id = R.string.label_city),
                     options = getCityList(
-                        selectedState, selectedDistrict, selectedPinCode
+                        uiState.state,
+                        uiState.district,
+                        uiState.pinCode
                     ),
-                    selectedValue = selectedCity,
+                    selectedValue = uiState.city,
                     onSelection = {
                         createRequestViewModel.onEvent(
                             RegistrationUIEvent.CityValueChangeEvent(it)
@@ -217,15 +222,19 @@ fun CreateRequestScreen(
                         }
                         createRequestViewModel.createNewBloodRequest(
                             onCreated = { response ->
-                                onDone()
-                                showToast(context, response.message.toString())
+                                if (response.statusCode == context.getString(R.string.status_code_success)) {
+                                    onDone()
+                                    showToast(context, response.message.toString())
+                                } else {
+                                    showToast(context, context.getString(R.string.error))
+                                }
                             })
 
                     }, buttonText = stringResource(id = R.string.send_request),
-                    isEnable = !requestInProgress
+                    isEnable = !uiState.requestInProgress
                 )
 
-                if (requestInProgress) {
+                if (uiState.requestInProgress) {
                     ProgressIndicatorComponent(label = stringResource(id = R.string.creating_indicator))
                 }
             }

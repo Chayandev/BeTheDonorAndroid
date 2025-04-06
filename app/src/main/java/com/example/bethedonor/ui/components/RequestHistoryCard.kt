@@ -99,7 +99,8 @@ fun RequestHistoryCard(
     var expanded by remember { mutableStateOf(isExpanded) }
     var isDialogVisible by remember { mutableStateOf(false) }
     var isClosedValue by remember { mutableStateOf(isClosed) }
-    val togglingToChangeStatus by historyViewModel.isToggleStatusRequestFetching.collectAsState()
+    val uiState by historyViewModel.uiState.collectAsState()
+    val togglingToChangeStatus = uiState.isToggleStatusRequestFetching
     val isToggling = togglingToChangeStatus[id] ?: false
     val context = LocalContext.current
     if (isDialogVisible) {

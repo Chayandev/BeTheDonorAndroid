@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.bethedonor.data.api.RetrofitClient
 import com.example.bethedonor.data.dataModels.AccountResponse
 import com.example.bethedonor.data.dataModels.ProfileResponse
+import com.example.bethedonor.data.dataModels.UserProfile
 import com.example.bethedonor.data.preferences.PreferencesManager
 import com.example.bethedonor.data.repository.UserRepositoryImp
 import com.example.bethedonor.data.dataModels.UserUpdate
@@ -16,33 +17,70 @@ import com.example.bethedonor.domain.usecase.GetUserProfileUseCase
 import com.example.bethedonor.domain.usecase.UpdateProfileUseCase
 import com.example.bethedonor.ui.utils.uievent.RegistrationUIEvent
 import com.example.bethedonor.ui.utils.uistate.RegistrationUiState
-import com.example.bethedonor.utils.NetworkConnectivityMonitor
 import com.example.bethedonor.utils.Validator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ProfileViewModel(application: Application, ) : AndroidViewModel(application) {
+/**
+ * Holds all profile-related states for better organization and management.
+ */
+data class ProfileUiState(
+    val selectedState: String = "",
+    val selectedDistrict: String = "",
+    val selectedCity: String = "",
+    val selectedPinCode: String = "",
+    val availableToDonate: Boolean = false,
+    val hasFetchedProfile: Boolean = false,
+    val requestInProgress: Boolean = false,
+    val isRefreshing: Boolean = false,
+    val deletingAccountProgress: Boolean = false,
+    val updatingProfileInProgress: Boolean = false,
+    val profileResponse: Result<ProfileResponse>? = null,
+    val deleteAccountResponse: Result<AccountResponse>? = null,
+    val retryFlag: Boolean = false
+)
 
 
-    // ***** access the datastore ***** //
+class ProfileViewModel(application: Application) : AndroidViewModel(application) {
+
+    // Preferences manager for JWT token retrieval
     private val preferencesManager = PreferencesManager(getApplication())
-    private fun getAuthToken():String?{
-        return preferencesManager.jwtToken
-    }
-    //*************************
 
-    private val hasFetchedProfile = mutableStateOf(false)
-    fun setFetchedProfile(value: Boolean) {
-        hasFetchedProfile.value = value
-    }
-    fun getFetchedProfile(): Boolean {
-        return hasFetchedProfile.value
-    }
-    var updateProfileUiState = mutableStateOf(RegistrationUiState())
 
-    //***update-profile-bottom-sheet ***//
+    // MutableStateFlow to manage UI state with initial state as AllRequestUiState
+    private val _uiState = MutableStateFlow(ProfileUiState())
+    val uiState: StateFlow<ProfileUiState> get() = _uiState
+    val updateProfileUiState = mutableStateOf(RegistrationUiState())
+
+    // API services
+    private val apiService = RetrofitClient.instance
+    private val userRepository = UserRepositoryImp(apiService)
+
+    //use cases
+    private val getUserProfileUserUseCase = GetUserProfileUseCase(userRepository)
+    private val closeAccountUseCase = CloseAccountUseCase(userRepository)
+    private val updateProfileUseCase = UpdateProfileUseCase(userRepository)
+
+
+    /**
+     * Retrieves the JWT token from the PreferencesManager.
+     * @return the JWT token as a String.
+     */
+    private fun getAuthToken(): String? = preferencesManager.jwtToken
+
+    /**
+     * Updates the refresh status state with value true
+     */
+    fun setRefresherStatusTrue() {
+        _uiState.update { it.copy(isRefreshing = true) }
+    }
+
+    /**
+     * Handles UI events for profile management.
+     * @param event the event triggered by the UI.
+     */
     fun onEvent(event: RegistrationUIEvent) {
         when (event) {
 
@@ -94,211 +132,263 @@ class ProfileViewModel(application: Application, ) : AndroidViewModel(applicatio
                 )
             }
 
-            is RegistrationUIEvent.PasswordValueChangeEvent -> {}
-            is RegistrationUIEvent.ConfirmPasswordValueChangeEvent -> {}
-            is RegistrationUIEvent.DateValueChangeEvent -> {}
-            is RegistrationUIEvent.BloodGroupValueChangeEvent -> {}
-            is RegistrationUIEvent.NameValueChangeEvent -> {}
-            is RegistrationUIEvent.EmailValueChangeEvent -> {}
-            RegistrationUIEvent.RegistrationButtonClick -> {
-                //  printState()
+            else -> {
+                updateProfileUiState.value
             }
-
-            is RegistrationUIEvent.BloodUnitValueChangeEvent -> {}
-            is RegistrationUIEvent.DonationCenterValueChangeEvent -> {}
+            // Handle other events...
         }
     }
 
+
+    /**
+     * Validates the fields before updating the profile.
+     * @return true if all fields are valid, false otherwise.
+     */
     fun validateWithRulesForUpdate(): Boolean {
         //  printState()
-        Log.d("updateProfileUiState", updateProfileUiState.value.genderErrorState.toString())
-        Log.d("updateProfileUiState", updateProfileUiState.value.stateErrorState.toString())
-        Log.d("updateProfileUiState", updateProfileUiState.value.districtErrorState.toString())
+        Log.d(
+            "updateProfileUiState",
+            updateProfileUiState.value.genderErrorState.toString()
+        )
+        Log.d(
+            "updateProfileUiState",
+            updateProfileUiState.value.stateErrorState.toString()
+        )
+        Log.d(
+            "updateProfileUiState",
+            updateProfileUiState.value.districtErrorState.toString()
+        )
         Log.d("updateProfileUiState", updateProfileUiState.value.cityErrorState.toString())
-        Log.d("updateProfileUiState", updateProfileUiState.value.pinCodeErrorState.toString())
+        Log.d(
+            "updateProfileUiState",
+            updateProfileUiState.value.pinCodeErrorState.toString()
+        )
         //  if (availableToDonate.value)
-        return updateProfileUiState.value.genderErrorState.status
-                && updateProfileUiState.value.stateErrorState.status
-                && updateProfileUiState.value.districtErrorState.status
-                && updateProfileUiState.value.cityErrorState.status
-                && updateProfileUiState.value.pinCodeErrorState.status
+        return updateProfileUiState.value.run {
+            genderErrorState.status && stateErrorState.status && districtErrorState.status &&
+                    cityErrorState.status && pinCodeErrorState.status
+        }
     }
 
-    private val _selectedState = MutableStateFlow("")
-    val selectedState: StateFlow<String> = _selectedState
 
-    private val _selectedDistrict = MutableStateFlow("")
-    val selectedDistrict: StateFlow<String>  = _selectedDistrict
-
-    private val _selectedCity = MutableStateFlow("")
-    val selectedCity: StateFlow<String> = _selectedCity
-
-    private val _selectedPinCode = MutableStateFlow("")
-    val selectedPinCode: StateFlow<String> = _selectedPinCode
-
-    private val _availableToDonate = MutableStateFlow(false)
-    val availableToDonate: StateFlow<Boolean> = _availableToDonate
-
-    fun setAllProfileDetails(state:String,district:String,city:String,pin:String,available:Boolean){
-        _selectedState.value=state
-        _selectedDistrict.value=district
-        _selectedCity.value=city
-        _selectedPinCode.value=pin
-        _availableToDonate.value=available
+    /**
+     * Sets all selected profile details.
+     * @param profileData .
+     */
+    private fun setAllProfileDetails(profileData: UserProfile?) {
+        _uiState.value = _uiState.value.copy(
+            selectedState = profileData?.state.toString(),
+            selectedDistrict = profileData?.district.toString(),
+            selectedCity = profileData?.city.toString(),
+            selectedPinCode =profileData?.pin.toString(),
+            availableToDonate = profileData?.available?:false
+        )
+        onEvent(
+            RegistrationUIEvent.GenderValueChangeEvent(
+               gender = profileData?.gender.toString()
+            )
+        )
+        onEvent(
+            RegistrationUIEvent.StateValueChangeEvent(
+              state=profileData?.state.toString()
+            )
+        )
+        onEvent(
+            RegistrationUIEvent.DistrictValueChangeEvent(
+                district=profileData?.district.toString()
+            )
+        )
+        onEvent(
+            RegistrationUIEvent.CityValueChangeEvent(
+                city=profileData?.city.toString()
+            )
+        )
+        onEvent(
+            RegistrationUIEvent.PinCodeValueChangeEvent(
+                profileData?.pin.toString()
+            )
+        )
+        onEvent(
+            RegistrationUIEvent.AvailabilityCheckerValueChangeEvent(
+                status =profileData?.available?:false
+            )
+        )
     }
 
+    //***** Helper Methods for Selection Logic *****//
     fun selectState(state: String) {
-        _selectedState.value = state
-        clearSelectionsFor("state")
+        _uiState.update { it.copy(selectedState = state) }
+        clearDependentSelections("state")
     }
 
     fun selectDistrict(district: String) {
-        _selectedDistrict.value = district
-       clearSelectionsFor("district")
-    }
-
-    fun selectPin(pinCode: String) {
-        _selectedPinCode.value = pinCode
-        clearSelectionsFor("pin")
+        _uiState.update { it.copy(selectedDistrict = district) }
+        clearDependentSelections("district")
     }
 
     fun selectCity(city: String) {
-        _selectedCity.value = city
+        _uiState.update { it.copy(selectedCity = city) }
+    }
+
+    fun selectPin(pinCode: String) {
+        _uiState.update { it.copy(selectedPinCode = pinCode) }
+        clearDependentSelections("pin")
     }
 
     fun setAvailableToDonate(value: Boolean) {
-        _availableToDonate.value = value
+        _uiState.update { it.copy(availableToDonate = value) }
     }
-    // Clear dependent selections based on the selected field
-    private fun clearSelectionsFor(level: String) {
-        Log.d("clearSelection",level)
+
+    //***********************************//
+
+
+    //***** Clear Dependent Selections *****//
+    private fun clearDependentSelections(level: String) {
+        Log.d("level", level)
         when (level) {
             "state" -> {
-                Log.d("clearSelection",level)
-                _selectedDistrict.value=""
-                _selectedCity.value = ""
-                _selectedPinCode.value = ""
+                _uiState.update {
+                    it.copy(
+                        selectedDistrict = "",
+                        selectedCity = "",
+                        selectedPinCode = ""
+                    )
+                }
+                onEvent(
+                    RegistrationUIEvent.DistrictValueChangeEvent(
+                        _uiState.value.selectedDistrict
+                    )
+                )
+                onEvent(
+                    RegistrationUIEvent.CityValueChangeEvent(
+                        _uiState.value.selectedCity
+                    )
+                )
+                onEvent(
+                    RegistrationUIEvent.PinCodeValueChangeEvent(
+                        _uiState.value.selectedPinCode
+                    )
+                )
             }
+
             "district" -> {
-                Log.d("clearSelection",level)
-                _selectedCity.value = ""
-                _selectedPinCode.value = ""
+                _uiState.update {
+                    it.copy(
+                        selectedCity = "",
+                        selectedPinCode = ""
+                    )
+                }
+                onEvent(
+                    RegistrationUIEvent.CityValueChangeEvent(
+                        _uiState.value.selectedCity
+                    )
+                )
+                onEvent(
+                    RegistrationUIEvent.PinCodeValueChangeEvent(
+                        _uiState.value.selectedPinCode
+                    )
+                )
             }
-            "pin"->{
-                Log.d("clearSelection",level)
-                _selectedCity.value = ""
+
+            "pin" -> {
+                _uiState.update { it.copy(selectedCity = "") }
+                onEvent(
+                    RegistrationUIEvent.CityValueChangeEvent(
+                        _uiState.value.selectedCity
+                    )
+                )
             }
         }
     }
-    // Edit Email address here and OTP validation **********
 
-    //****************************************************
-
-
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> get() = _isRefreshing.asStateFlow()
-
-    fun setRefresherStatusTrue() {
-        _isRefreshing.value = true
-    }
-
-
-    //*** api-responses ***//
-    private val _profileResponse = MutableStateFlow<Result<ProfileResponse>?>(null)
-    val profileResponse: StateFlow<Result<ProfileResponse>?> = _profileResponse
-
-    private val _retryFlag = MutableStateFlow(false)
-    val retryFlag: StateFlow<Boolean> get() = _retryFlag
-    fun setRetryFlag(value: Boolean) {
-        _retryFlag.value = value
-    }
-
-
-    private val _deleteAccountResponse = MutableStateFlow<Result<AccountResponse>?>(null)
-    val deleteAccountResponse: StateFlow<Result<AccountResponse>?> = _deleteAccountResponse
-
-    //*** api_service  use case ***
-    private val apiService = RetrofitClient.instance
-    private val userRepository = UserRepositoryImp(apiService)
-    private val getUserProfileUserUseCase = GetUserProfileUseCase(userRepository)
-    private val closeAccountUseCase = CloseAccountUseCase(userRepository)
-    private val updateProfileUseCase = UpdateProfileUseCase(userRepository)
-    var requestInProgress = mutableStateOf(false)
-    var deletingAccountProgress= mutableStateOf(false)
-    var updatingProfileInProgress = mutableStateOf(false)
-
+    /**
+     * Retrieves the user's profile information.
+     * @param onProfileFetched callback to be executed after fetching profile.
+     */
     fun getProfile(onProfileFetched: () -> Unit) {
-        requestInProgress.value = true
+        _uiState.value = _uiState.value.copy(requestInProgress = true)
         viewModelScope.launch {
             try {
-                Log.d("token", getAuthToken().toString())
                 val response = getUserProfileUserUseCase.execute(getAuthToken().toString())
-                val result = Result.success(response)
-                _profileResponse.value = result
-                Log.d("Response", response.toString())
+                if (response.myProfile != null) {
+                    _uiState.value = _uiState.value.copy(
+                        profileResponse = Result.success(response),
+                        retryFlag = false
+                    )
+                    setAllProfileDetails(response.myProfile)
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        profileResponse = Result.failure(Exception(response.message)),
+                        retryFlag = true
+                    )
+                }
             } catch (e: Exception) {
-                e.printStackTrace()
-                val result = Result.failure<ProfileResponse>(e)
-                _profileResponse.value = result
+                _uiState.value = _uiState.value.copy(
+                    profileResponse = Result.failure(e),
+                    retryFlag = true
+                )
             } finally {
-                requestInProgress.value = false
-                _isRefreshing.value = false
+                _uiState.value = _uiState.value.copy(
+                    requestInProgress = false,
+                    isRefreshing = false,
+                    hasFetchedProfile = true
+                )
                 onProfileFetched()
             }
         }
     }
 
+    /**
+     * Updates the user's profile information.
+     * @param onUpdate callback to be executed after updating profile.
+     */
     fun updateProfile(onUpdate: (Pair<String, String>) -> Unit) {
         val updates = UserUpdate(
-            // phoneNumber = updateProfileUiState.value.phoneNo,
             gender = updateProfileUiState.value.gender,
             state = updateProfileUiState.value.state,
             city = updateProfileUiState.value.city,
             district = updateProfileUiState.value.district,
             pin = updateProfileUiState.value.pinCode,
-            available = updateProfileUiState.value.checkedAvailabilityStatus
+            available =updateProfileUiState.value.checkedAvailabilityStatus
         )
-       updatingProfileInProgress.value=true
+        _uiState.value = _uiState.value.copy(updatingProfileInProgress = true)
         viewModelScope.launch {
             try {
                 val response = updateProfileUseCase.execute("0", getAuthToken().toString(), updates)
-                val result = Result.success(response)
-                //  _profileResponse.value = result
-                Log.d("Response", response.toString())
-                onUpdate(Pair("success", result.getOrNull()?.message.toString()))
+                onUpdate(Pair("success", response.message.toString()))
             } catch (e: Exception) {
-                val result = Result.failure<String>(e)
-                Log.d("Error", e.message.toString())
-                onUpdate(Pair("failure", result.exceptionOrNull()?.message.toString()))
+                onUpdate(Pair("failure", e.message.toString()))
             } finally {
-                updatingProfileInProgress.value=false
+                _uiState.value = _uiState.value.copy(updatingProfileInProgress = false)
             }
         }
     }
 
-
+    /**
+     * Deletes the user's account.
+     * @param onDeletePerformed callback to handle the result of the delete operation.
+     */
     fun deleteAccount(onDeletePerformed: (Result<AccountResponse>) -> Unit) {
-        deletingAccountProgress.value=true
+        _uiState.value = _uiState.value.copy(deletingAccountProgress = true)
         viewModelScope.launch {
             try {
                 val response = closeAccountUseCase.execute(getAuthToken().toString())
-                _deleteAccountResponse.value = Result.success(response)
-                Log.d("Response", response.toString())
                 onDeletePerformed(Result.success(response))
             } catch (e: Exception) {
-                _deleteAccountResponse.value = Result.failure(e)
-                Log.d("Error", e.message.toString())
                 onDeletePerformed(Result.failure(e))
             } finally {
-                deletingAccountProgress.value=false
+                _uiState.value = _uiState.value.copy(deletingAccountProgress = false)
             }
         }
     }
 
 
+    /**
+     * Logs out the user and clears the stored data.
+     * @param onLogout callback to be executed after logout.
+     */
     suspend fun logoutUser(onLogout: () -> Unit) {
         preferencesManager.clearUserData()
-        // Confirm the data has been cleared
         if (preferencesManager.jwtToken.isNullOrEmpty()) {
             onLogout()
         } else {
@@ -306,24 +396,11 @@ class ProfileViewModel(application: Application, ) : AndroidViewModel(applicatio
         }
     }
 
+
+    /**
+     * Resets the UI states to their default values.
+     */
     fun resetUiStates() {
-        // Reset MutableStateFlow properties
-        _selectedState.value = ""
-        _selectedDistrict.value = ""
-        _selectedCity.value = ""
-        _selectedPinCode.value = ""
-        _availableToDonate.value = false
-
-        // Reset mutableStateOf properties
-        hasFetchedProfile.value = false
-        updateProfileUiState.value = RegistrationUiState()
-        requestInProgress.value = false
-        deletingAccountProgress.value = false
-        updatingProfileInProgress.value = false
-
-        // Reset API response states
-        _profileResponse.value = null
-        _retryFlag.value = false
-        _deleteAccountResponse.value = null
+        _uiState.value = ProfileUiState() // Reset to default state
     }
 }

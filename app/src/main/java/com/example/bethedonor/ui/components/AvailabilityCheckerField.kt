@@ -1,5 +1,6 @@
 package com.example.bethedonor.ui.components
 
+import android.util.Log
 import android.widget.Space
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import com.example.bethedonor.ui.theme.teal
 
 @Composable
 fun AvailabilityCheckerField(value:Boolean,onCheckerChange: (Boolean) -> Unit) {
+    Log.d("value", "$value")
     var checkedState by remember { mutableStateOf(value) }
     Column(
         modifier = Modifier
@@ -46,7 +48,7 @@ fun AvailabilityCheckerField(value:Boolean,onCheckerChange: (Boolean) -> Unit) {
                 modifier = Modifier.width(20.dp),
                 onCheckedChange = {
                     checkedState = it
-                    onCheckerChange(checkedState)
+                    onCheckerChange(it)
                 },
                 enabled = true,
                 colors = CheckboxDefaults.colors(
