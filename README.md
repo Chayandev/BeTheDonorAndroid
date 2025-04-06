@@ -7,5 +7,5 @@ our platform which will be broadcasted to all the other user who male them selec
 with their location and contact details shared directly with the requester by accepting the request ,This system allows the person in need to select a donor based on proximity and convenience,
 ensuring the fastest and most efficient response. By prioritizing nearby donors, we streamline the process, making it easier to save lives and support our community in times of crisis. this is the mission 
 of our blood donation website also there is a option to directly contact to the donor who is available nearby by filtering also there is a page or dedicated organization to post blood donation camps organizing in 
-future by them by posting any poster related to this (future implementation.
+future by them by posting any poster related to this (future implementation).
 
